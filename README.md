@@ -200,7 +200,7 @@ uv run clinical-compiler compile input.json --policy-seed policy.json --output o
 # failed run writes NOTHING to the document stream — no partial document
 ```
 
-`input.json` is a JSON array of `StructuredFactInput` records. See `tests/fixtures/` for the frozen fault corpus (12 fault classes + 2 positive controls) once Phase 1 lands.
+`input.json` is a JSONL feed: one `StructuredFactInput` JSON object per line, blank lines ignored. A top-level JSON array is rejected with `INPUT_CONTRACT_ERROR` (fault class FC-03); undecodable (non-UTF-8) bytes fault the whole feed. The fault corpus is frozen in `design.md` (12 fault classes + 2 positive controls); its Phase-1 instances (FC-01..FC-05) are exercised inline in the `tests/unit/` adapter/validation modules, with `tests/fixtures/` reserved for later-phase corpus needs.
 
 ---
 
@@ -248,7 +248,7 @@ Precedence when multiple categories are present: **minimum code among 3–10 in 
 | Document mode | `--mode` | R1: only `NURSING_RECORD_TELEGRAPHIC` |
 | Clinical policy | `--policy-seed PATH` | Owner-authored JSON `{"terms": [...]}`; absent seed with no recorded `DEFERRED_BY_OWNER` → `UNRESOLVED_POLICY` (BLOCKED) |
 | Output | `--output PATH` or stdout | File writes are atomic (`temp + os.replace`), never partial |
-| Input | `INPUT` path | JSON array of `StructuredFactInput`; `-`/stdin deferred to R2 |
+| Input | `INPUT` path | JSONL feed — one `StructuredFactInput` object per line (top-level array rejected, FC-03); `-`/stdin deferred to R2 |
 
 No environment variables, no config files, no network, no secrets.
 

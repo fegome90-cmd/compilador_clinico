@@ -12,11 +12,11 @@ phases:
   sdd-spec: done # engram #7240, specs/ x7 domains
   sdd-design: done # engram #7242, design.md (24.4KB, 8 frozen decisions)
   sdd-tasks: done # engram #7244, tasks.md (42 tasks, 5 phases)
-  sdd-apply: phase1_units_1_4_done # engram #7256; U1 contract (72) + U2 structured_feed (100) + U3 input_validation+pipeline_types (129) + U4 integration (140/140, cov 100%, mypy+ruff clean); chain stable; Phase 1 gate (1.9) pending close — requires ordered git history (contract-before-adapter)
+  sdd-apply: phase1_done # engram #7256; gate 1.9 PASS 8/8; residuals 1.4/1.8 RESOLVED; 1.6 ADJUDICATED_ACCEPT_DEVIATION (inline corpus); WIRE_FORMAT=JSONL_CONFIRMED_BY_DESIGN (FC-03; README corregido); .mimosa untracked (staged-D); bundle hashes verified intact post-closure
   sdd-verify: pending
   sdd-archive: pending
 
-next_phase: PHASE_1_CLOSE — gate 1.9 (needs ordered commits: bundle+approvals → contract → adapter+stage → integration) → then Phase 2 work-unit mode (semantic_normalization first)
+next_phase: PHASE_2 approval record (owner authorization) → semantic_normalization work-unit mode → admissibility → policy injection → minimal integration → gate
 
 decision_gate_phase0: # CLOSED 2026-08-29 — resolutions in APPROVAL-PHASE1.md
   adj1_baseline_anomalies_drift_counting: RECONCILED_NOT_COUNTING  # effective BASELINE_ANOMALIES = 0
