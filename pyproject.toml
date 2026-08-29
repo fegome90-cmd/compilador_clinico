@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Clinical document compiler"
 requires-python = ">=3.11"
 
+[project.scripts]
+clinical-compiler = "clinical_compiler.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
