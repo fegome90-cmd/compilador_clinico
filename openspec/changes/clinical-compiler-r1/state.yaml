@@ -12,12 +12,12 @@ phases:
   sdd-spec: done # engram #7240, specs/ x7 domains
   sdd-design: done # engram #7242, design.md (24.4KB, 8 frozen decisions)
   sdd-tasks: done # engram #7244, tasks.md (42 tasks, 5 phases)
-  sdd-apply: phase2_done # engram #7256; gate 2.8 PASS 11/11 (post R-2.7); P2-U1..U5 + residual: 251/251, cov 100%, mypy 20 files + ruff limpios; 14 flags owner-pending en outputs/phase2-close.md; payload Phase 2 SIN commitear (HEAD 267258b)
+  sdd-apply: done_pending_owner_commit # engram #7256; TODAS las fases done: P1 8/8, P2 11/11, P3 5/5 (EVIDENCE VALID), P4 8/8 (post R-4.7a); 406/406, cov 100% (634/212/0); R1-apply = done-pending-owner-commit (P3-F11)
 
   sdd-verify: pending
   sdd-archive: pending
 
-next_phase: owner commit (payload Phase 2) → APPROVAL-PHASE3 (renderer/linter/DocumentIR/goldens) → work-unit mode
+next_phase: owner commit (payload P3+P4 + deletion adapters/README.md) → sdd-verify → sdd-archive → R2
 
 decision_gate_phase0: # CLOSED 2026-08-29 — resolutions in APPROVAL-PHASE1.md
   adj1_baseline_anomalies_drift_counting: RECONCILED_NOT_COUNTING  # effective BASELINE_ANOMALIES = 0
