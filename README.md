@@ -2,9 +2,9 @@
 
 > **One-line purpose:** Compile scattered per-source clinical facts into a single deterministic, fail-closed, fully traceable clinical document.
 
-Compiler of clinical records (`clinical-record-compiler` v0.1.0). Turns telegraphic Spanish notes and machine readings scattered across sources — `TA 120/80`, `FC 72`, lab values, nursing notes — into a safe `NURSING_RECORD_TELEGRAPHIC` document without losing the three things that make a clinical document trustworthy: **certainty**, **missingness** (assessed-absent vs never-assessed), and **provenance**.
+Compiler of clinical records (`clinical-record-compiler` v0.1.0). Turns scattered per-source clinical readings — `TA 120/80`, `FC 72`, lab values, nursing notes, expressed as **structured JSONL facts** (R1 accepts no free text) — into a safe `NURSING_RECORD_TELEGRAPHIC` document without losing the three things that make a clinical document trustworthy: **certainty**, **missingness** (assessed-absent vs never-assessed), and **provenance**.
 
-> **Status: WIP — R1 under SDD.** Core is frozen green (29/29 tests, 95%+ branch coverage, `mypy --strict`, `ruff` clean). Pipeline passes, renderer, linter and CLI are scaffolded and being implemented under `openspec/changes/clinical-compiler-r1`. API and contracts below reflect the *current* committed core plus the *frozen design* for R1 — runnable end-to-end `compile` ships at Phase 4.
+> **Status: WIP — R1 under SDD.** Phases 0–3 are gated and closed (input contract → passes → renderer/linter/determinism); Phase 4 (runner, CLI, docs) is landing. The end-to-end `compile` CLI is implemented and verified against the committed goldens (suite: 337 passed, 100% branch coverage, `mypy --strict`, `ruff` clean at Phase-4 start). API and contracts below reflect the committed implementation.
 
 ---
 
@@ -56,7 +56,7 @@ Every stage is a **pure function** `tuple[In, ...] -> StageResult[Out]` (`pipeli
 
 **Determinism (frozen):** `tuple` containers, explicit codepoint sort key `(field_id, clinical_fact_id)`, locale-free formatting, UTF-8/`\n`-only, canonical `json.dumps(sort_keys=True, ...)`, cross-run SHA-256 gate, golden files under `tests/golden/` (with `tests/golden/independent/` for independently authored expected output).
 
-**Policy (D7):** `admissibility` takes `veto_terms: frozenset[str]` explicitly; the runner loads it from `--policy-seed PATH` (`{"terms": [...]}`). Missing seed without a recorded owner decision `DEFERRED_BY_OWNER` → `UNRESOLVED_POLICY` → gate BLOCKED (never silently empty).
+**Policy (D7):** `admissibility` takes `veto_terms: frozenset[str]` explicitly; the runner loads it from `--policy-seed PATH` (`{"terms": [...]}`). The flag **absent** resolves to the approved-empty policy, citing the durable owner decision (`APPROVAL-PHASE1.md`, `POLICY_SEED_DECISION = DEFERRED_BY_OWNER`) — the FC-12 production path, an empty set that always traces to a recorded ruling. A **given** seed that is missing, unreadable, malformed, or wrongly shaped resolves `UNRESOLVED_POLICY` → CLI usage exit 2 — never empty-set-and-continue, and never an uncited empty set (an approved-empty policy without a `DEFERRED_BY_OWNER` citation is unrepresentable by construction).
 
 ---
 
@@ -71,9 +71,9 @@ src/clinical_compiler/
 │   └── policy.py             # NEVER_AUTO_TERMS
 ├── adapters/
 │   ├── contract.py           # frozen declarative input-contract table (single source of truth)
-│   ├── structured_feed.py    # bytes → SourceFactIR (branch A)
+│   ├── structured_feed.py    # JSONL bytes → per-record contract evaluations (branch A)
 │   ├── seed.py               # --policy-seed loader (structural validation only)
-│   └── free_text.py          # only if Phase 0 selects free-text branch
+│   └── free_text.py          # NOT built — Phase 0 recorded STRUCTURED_FEED_ONLY
 ├── passes/
 │   ├── input_validation.py
 │   ├── semantic_normalization.py
@@ -89,11 +89,12 @@ tests/
 ├── conftest.py               # make_provenance / make_clinical_value / IR factories
 ├── fixtures/                 # corpus fixtures (12 fault classes + 2 positive controls)
 ├── golden/                   # golden documents + SHA-256 digests (incl. independent/)
-├── unit/                     # per-pass admitted/quarantined + interpretation table
-└── integration/              # pipeline.run + cli.main via subprocess (exit codes)
+│   └── scenarios/            # named fixture sets: input.jsonl + document.txt + manifest digests
+└── unit/                     # per-pass, adapter, renderer/linter tests + runner/CLI/determinism
+                              # integration suites (test_pipeline, test_cli, test_integration_*)
 
 openspec/changes/clinical-compiler-r1/  # SDD bundle: proposal → design → tasks → specs
-docs/architecture.md           # pipeline, contracts, invariants (filled at Phase 4)
+docs/architecture.md           # architecture record (pipeline, contracts, invariants, lineage)
 ```
 
 Dependency rule: `cli → pipeline → {passes, renderers, linter} → {adapters(contract), pipeline_types} → core{ir, diagnostics, policy} → types`. `core` never imports from new packages.
@@ -115,10 +116,8 @@ Dependency rule: `cli → pipeline → {passes, renderers, linter} → {adapters
 git clone https://github.com/fegome90-cmd/compilador_clinico.git
 cd compilador_clinico
 
-# install (editable) + dev tools
+# install (editable) + dev tools — the only supported setup path
 uv sync --group dev
-# or
-uv pip install -e ".[dev]"  # if you add [project.optional-dependencies]
 
 # verify baseline (must be green before any change)
 uv run pytest --cov=clinical_compiler --cov-report=term-missing
@@ -126,7 +125,7 @@ uv run mypy --strict src
 uv run ruff check src tests
 ```
 
-`pyproject.toml` declares `tool.setuptools.packages.find.where = ["src"]` and `tool.pytest.ini_options.pythonpath = ["src"]`.
+`pyproject.toml` declares `tool.setuptools.packages.find.where = ["src"]` and `tool.pytest.ini_options.pythonpath = ["src"]`. `[project].dependencies` is `[]` — the runtime is stdlib-only; only `pytest`, `pytest-cov`, `ruff`, `mypy` come from the `dev` dependency group. `[project.scripts]` registers the `clinical-compiler` console script (`clinical_compiler.cli:main`), so after `uv sync` the examples below run as plain `clinical-compiler …` or via `uv run clinical-compiler …`.
 
 ---
 
@@ -167,40 +166,63 @@ assert policy.NEVER_AUTO_TERMS == frozenset()
 
 ### 2. Input contract (frozen, `adapters/contract.py`)
 
-Structured facts at the boundary are `TypedDict`s — validated verbatim, never normalized by the adapter:
+Input is a **JSONL feed**: one fact-record object per non-blank line. The frozen contract is a declarative table (`CONTRACT`) plus the pure `map_record` — the single source of truth enforced by both the adapter and `input_validation`:
 
 ```python
 from clinical_compiler.adapters.contract import (
-    StructuredFactInput, ProvenanceInput,
-    REQUIRED_FACT_KEYS, ALLOWED_FACT_KEYS,
+    CONTRACT,                     # field_id → FieldContract (per-field raw-value types)
+    REQUIRED_RECORD_KEYS,         # {"fact_id", "field_id", "raw_value", "provenance"}
+    OPTIONAL_RECORD_KEYS,         # {"source_asserted_certainty"}
+    ALLOWED_SOURCE_KINDS,         # {"monitor", "lab", "clinical_note"}
 )
 
-record: StructuredFactInput = {
-    "fact_id": "fact-1",
-    "field_id": "FC",
-    "raw_value": 72,                          # RawScalar = str | int | float | None (bool excluded)
-    "provenance": ProvenanceInput(source_kind="monitor", source_ref="mon-001"),
-    # optional: "source_asserted_certainty": "probable"  # preserved verbatim, never overwrites compiler certainty
-}
+# CONTRACT admits exactly two fields in R1:
+#   FC → raw_value: int | float        TA → raw_value: str
+# raw_value: null is admitted for every field — it is the structured
+# branch's assessed-absence marker (PC-2) and normalizes to MISSING.
 ```
 
-Rules: `fact_id`, `field_id`, `raw_value`, `provenance` required; only `source_asserted_certainty` is optional; unknown keys → `INPUT_CONTRACT_ERROR`; `raw_value: bool` is rejected (even though `bool <: int` in Python).
+A conformant record (the exact bytes the pipeline accepts):
 
-### 3. CLI — `clinical-compiler compile` (ships at Phase 4, frozen surface)
+```json
+{"fact_id": "pc1-ta-1", "field_id": "TA", "raw_value": "120/80",
+ "provenance": {"source_kind": "monitor", "source_ref": "m-9"}}
+```
+
+Rules (all violations → diagnostics, never exceptions):
+- `fact_id`, `field_id`, `raw_value`, `provenance` required; only `source_asserted_certainty` is optional; unknown keys → `INPUT_CONTRACT_ERROR`.
+- `field_id` must be in `CONTRACT` (R1: `FC`, `TA`); `source_kind` must be in `ALLOWED_SOURCE_KINDS`; `provenance` must declare exactly `source_kind` + `source_ref`.
+- `raw_value` type is checked by **exact runtime type** against the field's declared types — a `bool` is rejected for `FC` even though `bool <: int` in Python (`TYPE_ERROR`); an arbitrary object can never become an admissible value.
+- Optional `source_asserted_certainty` must name a `Certainty` taxonomy member; it is captured verbatim (authority `PRESERVED`) and never overwrites or upgrades the compiler-assigned certainty (`UNRESOLVED` in R1).
+
+### 3. CLI — `clinical-compiler compile` (implemented, frozen surface)
 
 ```bash
-# happy path — deterministic document to stdout (exit 0)
-uv run clinical-compiler compile input.json --mode NURSING_RECORD_TELEGRAPHIC --output out.txt
+# happy path — deterministic document to stdout (exit 0); --mode defaults
+# to NURSING_RECORD_TELEGRAPHIC, the only R1 mode
+clinical-compiler compile input.jsonl --mode NURSING_RECORD_TELEGRAPHIC --output out.txt
 
-# with owner-authored policy seed (veto terms that must never be auto-confirmed)
-uv run clinical-compiler compile input.json --policy-seed policy.json --output out.txt
+# with an owner-authored policy seed (veto terms that must never be auto-confirmed)
+clinical-compiler compile input.jsonl --policy-seed policy.json
 # policy.json shape: {"terms": ["<term-a>", "<term-b>"]}
 
-# diagnostics always on stderr, one per line:  CODE: message (path)
-# failed run writes NOTHING to the document stream — no partial document
+# no --policy-seed at all runs the approved-empty policy (durable owner
+# deferral recorded in APPROVAL-PHASE1.md) — same clean compile
 ```
 
-`input.json` is a JSONL feed: one `StructuredFactInput` JSON object per line, blank lines ignored. A top-level JSON array is rejected with `INPUT_CONTRACT_ERROR` (fault class FC-03); undecodable (non-UTF-8) bytes fault the whole feed. The fault corpus is frozen in `design.md` (12 fault classes + 2 positive controls); its Phase-1 instances (FC-01..FC-05) are exercised inline in the `tests/unit/` adapter/validation modules, with `tests/fixtures/` reserved for later-phase corpus needs.
+A real round trip, using the committed golden fixture (`tests/golden/scenarios/pc1_unassessed_fc.input.jsonl`):
+
+```console
+$ cat input.jsonl
+{"fact_id": "pc1-ta-1", "field_id": "TA", "raw_value": "120/80", "provenance": {"source_kind": "monitor", "source_ref": "m-9"}}
+$ clinical-compiler compile input.jsonl
+FC: unknown [not_assessed]
+TA: 120/80 [present] [monitor m-9]
+```
+
+`FC` has no fact — it renders the explicit unassessed line `FC: unknown [not_assessed]` (never dropped, never rewritten as assessed absence). Every fact line carries its provenance: `{field}: {value} [{missingness}] [{source_kind} {source_ref}]`.
+
+Diagnostics always go to **stderr**, one per line: `CODE: message (path)` (the ` (path)` suffix only when the diagnostic carries one). A failed run writes **nothing** to the document stream — no partial document, and `--output` is written atomically (`temp` + `fsync` + `os.replace`) so no partial file is ever visible.
 
 ---
 
@@ -237,7 +259,9 @@ All 8 codes are **blocking** in R1 (no warnings). One invalid fact blocks the do
 | 10 | Lint | `LINT_FAILURE` present |
 | 70 | Internal | Unexpected exception — fail-closed catch-all, never 0 |
 
-Precedence when multiple categories are present: **minimum code among 3–10 in stage order** (documented order above, not enum declaration order).
+Precedence when multiple categories are present: **minimum code among 3–10 in stage order** (documented order above, not enum declaration order). The mapping is a pure, order-independent function of the diagnostic SET — identical failing input always yields the identical exit code.
+
+Enumeration is **full, never fail-fast**: a feed-level or record-level fault still runs every later stage on the (possibly empty) survivor set, so one run can report several categories. A `raw_value: true` for `FC`, for example, yields both `TYPE_ERROR` and — because no fact survives to selection — `DOCUMENT_SELECTION_ERROR` on stderr, and exits `4` (the minimum stage-order code).
 
 ---
 
@@ -245,10 +269,10 @@ Precedence when multiple categories are present: **minimum code among 3–10 in 
 
 | Concern | Mechanism | Notes |
 |---------|-----------|-------|
-| Document mode | `--mode` | R1: only `NURSING_RECORD_TELEGRAPHIC` |
-| Clinical policy | `--policy-seed PATH` | Owner-authored JSON `{"terms": [...]}`; absent seed with no recorded `DEFERRED_BY_OWNER` → `UNRESOLVED_POLICY` (BLOCKED) |
-| Output | `--output PATH` or stdout | File writes are atomic (`temp + os.replace`), never partial |
-| Input | `INPUT` path | JSONL feed — one `StructuredFactInput` object per line (top-level array rejected, FC-03); `-`/stdin deferred to R2 |
+| Document mode | `--mode` | R1: only `NURSING_RECORD_TELEGRAPHIC` (the default; unknown mode → exit 2 before any compile) |
+| Clinical policy | `--policy-seed PATH` | Owner-authored JSON `{"terms": [...]}`; flag absent → approved-empty policy citing the recorded `DEFERRED_BY_OWNER` (APPROVAL-PHASE1.md); a given-but-invalid seed → `UNRESOLVED_POLICY`, exit 2 |
+| Output | `--output PATH` or stdout | File writes are atomic (`temp + fsync + os.replace` + dir fsync), never partial |
+| Input | `INPUT` path | JSONL feed — one fact-record object per line, blank lines ignored; a top-level JSON array is rejected (`INPUT_CONTRACT_ERROR`, FC-03) and non-UTF-8 bytes fault the whole feed; `-`/stdin deferred to R2 |
 
 No environment variables, no config files, no network, no secrets.
 
@@ -266,10 +290,10 @@ uv run ruff check src tests
 
 # determinism gate (Phase 3): byte-identical output across fresh interpreters
 # python -I + PYTHONHASHSEED=0 vs random — SHA-256 equality vs committed golden digest
-uv run pytest tests/integration/test_determinism.py -v
+uv run pytest tests/unit/test_integration_golden_determinism.py -v
 ```
 
-Conventions: `pytest.mark.unit` / `integration` / `slow`; factories in `tests/conftest.py`; golden digests in `tests/golden/` (implementation-generated goldens are `DEGRADED` evidence — at least one sample under `tests/golden/independent/` must be independently authored by the decision owner).
+Conventions: `pytest.mark.unit` / `integration` / `slow`; factories in `tests/conftest.py`; golden corpus in `tests/golden/` (`manifest.json` + `scenarios/` — each fixture set's input and document SHA-256) with independently authored expected samples under `tests/golden/independent/` (implementation-generated goldens alone are `DEGRADED` evidence; the committed corpus is `EVIDENCE_INTEGRITY = VALID`, corroborated by the independent sample).
 
 ---
 
@@ -309,7 +333,11 @@ Conventions: `pytest.mark.unit` / `integration` / `slow`; factories in `tests/co
 
 ### `clinical_compiler.adapters.contract`
 
-`StructuredFactInput` / `ProvenanceInput` (`TypedDict`), `RawScalar = str | int | float | None`, `REQUIRED_FACT_KEYS` / `OPTIONAL_FACT_KEYS` / `ALLOWED_FACT_KEYS` / `REQUIRED_PROVENANCE_KEYS` / `ALLOWED_PROVENANCE_KEYS`.
+`CONTRACT: Mapping[str, FieldContract]` (R1: `FC → (int, float)`, `TA → (str,)` — exact runtime types), `REQUIRED_RECORD_KEYS` / `OPTIONAL_RECORD_KEYS` / `ALLOWED_RECORD_KEYS`, `REQUIRED_PROVENANCE_KEYS` (exactly `source_kind` + `source_ref`), `ALLOWED_SOURCE_KINDS` (`monitor`, `lab`, `clinical_note`), `map_record(record) -> ContractEvaluation` (fact XOR diagnostic), `StructuredFeedFact` (mapped `SourceFactIR` + verbatim `source_asserted_certainty`).
+
+### `clinical_compiler.adapters.seed` and `clinical_compiler.pipeline_types`
+
+`PolicyResolution` (state `POPULATED` / `APPROVED_EMPTY_BY_DEFERRAL` / `UNRESOLVED_POLICY`, construction-time legal-shape invariants), `load_policy_seed(path)`, `approved_empty_by_deferral(citation)` (requires a `DEFERRED_BY_OWNER` citation), `PolicySeedFault` (typed fault reasons). `pipeline_types.StageResult[_T]` — the leaf stage contract (`admitted` + `diagnostics` tuples), re-exported by `pipeline.py`.
 
 ---
 
@@ -329,7 +357,7 @@ Activation: no phase executes without a durable hash-bound approval record (`APP
 
 ## Roadmap
 
-- **R1 (current):** Phases 0–4 — input contract freeze → 4 passes → renderer/linter/determinism → runner/CLI/docs. Single mode `NURSING_RECORD_TELEGRAPHIC`, no stdin, no `--json`, no conflict resolution (ambiguity blocks).
+- **R1 (current):** Phases 0–4 — input contract freeze → 4 passes → renderer/linter/determinism → runner/CLI/docs. Phases 0–3 are gated and closed; Phase 4 is landing. Single mode `NURSING_RECORD_TELEGRAPHIC`, no stdin, no `--json`, no conflict resolution (ambiguity blocks).
 - **R2 candidates (not in scope):** free-text telegraphic micro-grammar (branch B), stdin/`--json` diagnostics, `check`-only subcommand, new document modes, bounded `ClinicalValue.value` type narrowing (`r2_debt` — `Any` stays in R1), CI.
 
 ---
@@ -344,10 +372,10 @@ This repository follows SDD: changes land as `openspec/changes/<name>/` bundles 
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| `INPUT_CONTRACT_ERROR` on valid-looking JSON | Unknown/extra key, `bool` `raw_value`, missing `provenance` sub-key | Validate against `adapters/contract.py` — `ALLOWED_FACT_KEYS` is closed; `bool` is intentionally rejected |
+| `INPUT_CONTRACT_ERROR` on valid-looking JSON | Unknown/extra key, `bool` `raw_value`, missing `provenance` sub-key | Validate against `adapters/contract.py` — `ALLOWED_RECORD_KEYS` is closed; `bool` is intentionally rejected |
 | `SEMANTIC_AMBIGUITY_BLOCK` with two facts for same `field_id` | Equal-authority conflict, no disambiguator — R1 never picks | Provide a single authoritative fact or a disambiguator (R1 has no resolution rule) |
 | `POLICY_VIOLATION` despite low certainty | Veto is certainty-independent — even `CONFIRMED` is blocked | Remove term from input or update owner-approved `--policy-seed` |
-| `UNRESOLVED_POLICY` / gate BLOCKED with no seed | No owner decision recorded (`APPROVED` or `DEFERRED_BY_OWNER`) | Record decision in approval file; do not run with silently empty set |
+| `UNRESOLVED_POLICY` / exit 2 with a seed given | The given seed file is missing, unreadable, malformed JSON, or not exactly `{"terms": [...]}` with string terms | Fix or point `--policy-seed` at a valid owner-authored seed; omitting the flag entirely runs the approved-empty policy (recorded owner deferral) |
 | Determinism gate fails | Unsorted iteration, locale formatting, `hash()`-dependent ordering | Use `tuple` + explicit codepoint sort key, locale-free `str(int)`, canonical JSON |
 
 ---
