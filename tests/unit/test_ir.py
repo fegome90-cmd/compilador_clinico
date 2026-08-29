@@ -1,5 +1,6 @@
 # tests/unit/test_ir.py
 
+from collections.abc import Callable
 from dataclasses import FrozenInstanceError
 
 import pytest
@@ -10,12 +11,7 @@ from clinical_compiler.core.ir import (
     DocumentIR,
     SourceFactIR,
 )
-from clinical_compiler.core.types import (
-    Certainty,
-    ClinicalValue,
-    Missingness,
-    Provenance,
-)
+from clinical_compiler.core.types import Certainty, ClinicalValue, Provenance
 
 
 def test_document_ir_references_facts_instead_of_storing_values() -> None:
@@ -33,19 +29,11 @@ def test_document_ir_references_facts_instead_of_storing_values() -> None:
     assert document.entries[0].clinical_fact_ref == "fact-001"
 
 
-def make_clinical_value() -> ClinicalValue:
-    """Build a representative clinical value for IR tests."""
-    return ClinicalValue(
-        value="72 bpm",
-        certainty=Certainty.PROBABLE,
-        missingness=Missingness.PRESENT,
-        provenance=Provenance(source_kind="monitor", source_ref="m-9"),
-    )
-
-
-def test_source_fact_ir_keeps_raw_value_and_provenance() -> None:
+def test_source_fact_ir_keeps_raw_value_and_provenance(
+    make_provenance: Callable[..., Provenance],
+) -> None:
     """SourceFactIR preserves the raw value and its attribution."""
-    provenance = Provenance(source_kind="clinical_note", source_ref="note-3")
+    provenance = make_provenance(source_kind="clinical_note", source_ref="note-3")
     source_fact = SourceFactIR(
         fact_id="raw-1",
         field_id="heart_rate",
@@ -56,19 +44,23 @@ def test_source_fact_ir_keeps_raw_value_and_provenance() -> None:
     assert source_fact.provenance is provenance
 
 
-def test_source_fact_ir_is_immutable() -> None:
+def test_source_fact_ir_is_immutable(
+    make_provenance: Callable[..., Provenance],
+) -> None:
     """SourceFactIR mutation is rejected by the frozen contract."""
     source_fact = SourceFactIR(
         fact_id="raw-1",
         field_id="heart_rate",
         raw_value="FC 72",
-        provenance=Provenance(source_kind="monitor", source_ref="m-9"),
+        provenance=make_provenance(),
     )
     with pytest.raises(FrozenInstanceError):
         source_fact.raw_value = "FC 80"  # type: ignore[misc]
 
 
-def test_canonical_fact_references_its_source_facts() -> None:
+def test_canonical_fact_references_its_source_facts(
+    make_clinical_value: Callable[..., ClinicalValue],
+) -> None:
     """CanonicalClinicalFact lists the source facts supporting it."""
     canonical = CanonicalClinicalFact(
         clinical_fact_id="fact-001",
@@ -80,7 +72,9 @@ def test_canonical_fact_references_its_source_facts() -> None:
     assert canonical.value.certainty is Certainty.PROBABLE
 
 
-def test_canonical_fact_is_immutable() -> None:
+def test_canonical_fact_is_immutable(
+    make_clinical_value: Callable[..., ClinicalValue],
+) -> None:
     """CanonicalClinicalFact mutation is rejected by the frozen contract."""
     canonical = CanonicalClinicalFact(
         clinical_fact_id="fact-001",
