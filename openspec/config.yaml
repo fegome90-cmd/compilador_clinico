@@ -1,0 +1,41 @@
+# openspec/config.yaml — Project-specific SDD config
+schema: spec-driven
+
+context: |
+  Tech stack: Python >=3.11, zero runtime dependencies, setuptools src-layout, uv-managed
+  Architecture: hexagonal (aspirational) — clinical record compiler: core IR/types/diagnostics/policy + empty passes/linter/renderers/adapters scaffold
+  Testing: pytest + coverage (fail_under=95, currently 100%), ruff, mypy strict (py.typed shipped)
+  Style: English identifiers, Spanish clinical domain (telegraphic nursing notes, TA/FC abbreviations)
+  Contract: AI Work Agent Execution Contract v0.3 discipline (hash-bound bundle approval, computable gates, read-only Phase 0)
+
+artifact_store:
+  mode: hybrid            # engram (cross-session) + openspec files (SHA-256 approval bundle) — both writes REQUIRED
+
+risk_policy: ask_on_risk  # escalate to human: contractual decisions, new dependencies, out-of-scope work
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Identify affected modules/packages
+    - Gate values must be COMPUTED, never assumed
+    - Proposal cannot act as its own approval record
+  specs:
+    - Use Given/When/Then format for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    - Follow existing code patterns and conventions
+    tdd: true
+    test_command: "uv run pytest"
+  verify:
+    test_command: "uv run pytest --cov=clinical_compiler --cov-fail-under=95"
+    build_command: "uv run mypy src && uv run ruff check src tests"
+    coverage_threshold: 95
+  archive:
+    - Warn before merging destructive deltas (large removals)
