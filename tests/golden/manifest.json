@@ -1,0 +1,44 @@
+{
+  "evidence_integrity_vocabulary": [
+    "VALID",
+    "DEGRADED",
+    "INVALID"
+  ],
+  "independent_sample": {
+    "expected_schema": "clinical-compiler-r1/independent-sample/1",
+    "manifest": "independent/MANIFEST.json",
+    "required_path": "independent/",
+    "rule": "Authored ONLY by the decision owner or an owner-designated audit path (design Determinism Mechanism #6 / task 3.7). The executor NEVER authors it. Absence keeps this corpus at EVIDENCE_INTEGRITY=DEGRADED and BLOCKS the Phase 3 determinism gate pending owner input.",
+    "status": "PRESENT"
+  },
+  "scenarios": [
+    {
+      "document": "scenarios/pc1_unassessed_fc.document.txt",
+      "evidence_integrity": "DEGRADED",
+      "input": "scenarios/pc1_unassessed_fc.input.jsonl",
+      "input_sha256": "d3e4206b6b15bdd9ab32131dca26542104e29ed6941e04a25df1bd07e1864b05",
+      "name": "pc1_unassessed_fc",
+      "provenance": "implementation-generated: produced by running the real chain over the committed input (design Mechanism #6: implementation-only goldens are DEGRADED evidence)",
+      "sha256": "31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99"
+    },
+    {
+      "document": "scenarios/pc2_assessed_absence_ta.document.txt",
+      "evidence_integrity": "DEGRADED",
+      "input": "scenarios/pc2_assessed_absence_ta.input.jsonl",
+      "input_sha256": "4af7f05b14487d1e9184c1d7e5fb9f54cfe4abe0ad82b91d42ed162a3c61071d",
+      "name": "pc2_assessed_absence_ta",
+      "provenance": "implementation-generated: produced by running the real chain over the committed input (design Mechanism #6: implementation-only goldens are DEGRADED evidence)",
+      "sha256": "6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909"
+    },
+    {
+      "document": "scenarios/standard_mixed.document.txt",
+      "evidence_integrity": "DEGRADED",
+      "input": "scenarios/standard_mixed.input.jsonl",
+      "input_sha256": "f66cbe51ebdb435bb4ca5a3ba9e63e1c8595593b65f591781052470d67eb1b9c",
+      "name": "standard_mixed",
+      "provenance": "implementation-generated: produced by running the real chain over the committed input (design Mechanism #6: implementation-only goldens are DEGRADED evidence)",
+      "sha256": "e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc"
+    }
+  ],
+  "schema": "clinical-compiler-r1/golden-manifest/1"
+}

@@ -1,0 +1,2 @@
+FC: 80.5 [present] [monitor m-3]
+TA: 120/80 [present] [monitor m-9]

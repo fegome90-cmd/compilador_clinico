@@ -1,0 +1,2 @@
+{"fact_id": "std-fc-1", "field_id": "FC", "raw_value": 80.5, "provenance": {"source_kind": "monitor", "source_ref": "m-3"}}
+{"fact_id": "std-ta-1", "field_id": "TA", "raw_value": "120/80", "provenance": {"source_kind": "monitor", "source_ref": "m-9"}}

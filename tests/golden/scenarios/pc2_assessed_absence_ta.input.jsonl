@@ -1,0 +1,2 @@
+{"fact_id": "pc2-fc-1", "field_id": "FC", "raw_value": 72, "provenance": {"source_kind": "monitor", "source_ref": "m-9"}}
+{"fact_id": "pc2-ta-1", "field_id": "TA", "raw_value": null, "provenance": {"source_kind": "clinical_note", "source_ref": "n-1"}}
