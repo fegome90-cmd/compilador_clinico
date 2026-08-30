@@ -1,0 +1,50 @@
+# Battery item 01-pytest-coverage — full suite + branch coverage gate (>=95)
+target_sha: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+tree_before: [0] porcelain lines
+command: uv run pytest --cov=clinical_compiler --cov-report=term-missing --strict-markers -q
+utc_start: 2026-08-30T12:01:17Z
+........................................................................ [ 11%]
+........................................................................ [ 23%]
+........................................................................ [ 34%]
+........................................................................ [ 46%]
+........................................................................ [ 57%]
+........................................................................ [ 69%]
+........................................................................ [ 81%]
+........................................................................ [ 92%]
+............................................../Users/felipe_gonzalez/Developer/compilador_clinico-postcommit-C1/.venv/lib/python3.14/site-packages/coverage/inorout.py:574: CoverageWarning: Module clinical_compiler was previously imported, but not measured (module-not-measured); see https://coverage.readthedocs.io/en/7.15.4/messages.html#warning-module-not-measured
+  self.warn(msg, slug="module-not-measured")
+                           [100%]
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.2-final-0 _______________
+
+Name                                                     Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------------------------
+src/clinical_compiler/__init__.py                            2      0      0      0   100%
+src/clinical_compiler/adapters/__init__.py                   0      0      0      0   100%
+src/clinical_compiler/adapters/contract.py                  73      0     28      0   100%
+src/clinical_compiler/adapters/seed.py                      83      0     36      0   100%
+src/clinical_compiler/adapters/structured_feed.py           23      0      4      0   100%
+src/clinical_compiler/cli.py                                95      0     14      0   100%
+src/clinical_compiler/core/__init__.py                       0      0      0      0   100%
+src/clinical_compiler/core/diagnostics.py                   14      0      0      0   100%
+src/clinical_compiler/core/ir.py                            26      0     10      0   100%
+src/clinical_compiler/core/policy.py                         2      0      0      0   100%
+src/clinical_compiler/core/types.py                         21      0      0      0   100%
+src/clinical_compiler/linter/__init__.py                     0      0      0      0   100%
+src/clinical_compiler/linter/conformance.py                 79      0     38      0   100%
+src/clinical_compiler/passes/__init__.py                     0      0      0      0   100%
+src/clinical_compiler/passes/admissibility.py               31      0     12      0   100%
+src/clinical_compiler/passes/document_selection.py          18      0      6      0   100%
+src/clinical_compiler/passes/input_validation.py            36      0     20      0   100%
+src/clinical_compiler/passes/semantic_normalization.py      37      0     14      0   100%
+src/clinical_compiler/pipeline.py                           72      0     22      0   100%
+src/clinical_compiler/pipeline_types.py                      7      0      0      0   100%
+src/clinical_compiler/renderers/__init__.py                  0      0      0      0   100%
+src/clinical_compiler/renderers/deterministic.py            88      0     48      0   100%
+----------------------------------------------------------------------------------------------------
+TOTAL                                                      707      0    252      0   100%
+Required test coverage of 95.0% reached. Total coverage: 100.00%
+622 passed in 1.73s
+utc_end: 2026-08-30T12:01:20Z
+exit_code: 0
+tree_after: [0] porcelain lines

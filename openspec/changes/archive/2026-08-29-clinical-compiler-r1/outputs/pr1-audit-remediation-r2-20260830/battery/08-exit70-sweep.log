@@ -1,0 +1,32 @@
+# Battery item 08-exit70-sweep — CLI family + stage-level NEW lint paths
+target_sha: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+tree_before: [0] porcelain lines
+command: uv run python /tmp/exit70_sweep_r2.py (13 CLI cases + 7 stage-level adversarial cases incl. canonical-char parity and FC-11 role paths)
+note: first attempt crashed in the harness (missing .encode() on 4 case literals — TypeError, harness bug, NOT a system-under-test exit); harness fixed, log restarted
+utc_start: 2026-08-30T12:03:46Z
+case                                          exit  verdict
+C01 valid feed                                   0  MAPPED
+C02 missing input file                           2  MAPPED
+C03 malformed JSONL                              3  MAPPED
+C04 provenance key missing                       3  MAPPED
+C05 bool raw_value                               4  MAPPED
+C06 empty fact_id                                3  MAPPED
+C07 empty source_ref                             3  MAPPED
+C08 whitespace-only source_ref                  10  MAPPED
+C09 U+2028 in raw_value                          3  MAPPED
+C10 TAB in raw_value                             4  MAPPED
+C11 NEL U+0085 in source_ref                     3  MAPPED
+C12 empty-terms seed (UNRESOLVED_POLICY)         2  MAPPED
+C13 vetoed term (POLICY_VIOLATION)               0  MAPPED
+S01 TAB-in-value injected bytes -> LINT_FAILURE    10  MAPPED
+S02 TAB-in-ref injected bytes -> LINT_FAILURE    10  MAPPED
+S03 U+0085-in-ref injected bytes -> LINT_FAILURE    10  MAPPED
+S04 U+2028-in-value injected bytes -> LINT_FAILURE    10  MAPPED
+S05 whitespace-ref injected bytes -> LINT_FAILURE    10  MAPPED
+S06 invalid-role DocumentIR -> LINT_FAILURE     10  MAPPED
+S07 unknown-mode DocumentIR -> LINT_FAILURE     10  MAPPED
+
+cases=20  exit70_count=0  ZERO_70=YES
+utc_end: 2026-08-30T12:03:47Z
+exit_code: 0
+tree_after: [0] porcelain lines

@@ -1,0 +1,34 @@
+# SHA-256 — PR1 audit remediation ROUND 2 (2026-08-30 UTC)
+target C1: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+
+## Files modified by this run (as committed in C1)
+
+1fe7e53385a19f36e8191c3d298c85eee4ec82fe04a170f4a0047adc27ee7846  src/clinical_compiler/linter/conformance.py
+e4d746fac4b76b281c713cd3954bc07a12ee64e9b7dc0f5e8393e8ab8f658b3a  src/clinical_compiler/renderers/deterministic.py
+b0ed0e0941d58171431db93d561b583d5cca0b104c20d083294f335cfab92529  tests/unit/test_linter_conformance.py
+ccc9a79e9b60916ac98b8af1ece1e51298d7a190f9a7a330d5cab88504cdc246  tests/unit/test_renderers_deterministic.py
+475c5afd9e2bdaa13e78fc68180344f959e0ed8210f65442aea1ceb6bd48273f  tests/unit/test_integration_phase3_chain.py
+b4bbde86017858cc6d13a1fa00b724f50ba5e4857542c5307c03d8c6647c2669  openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md
+5dfd4ceb648a03d0b14a8f5d83a012eb925d481c9e31490df9dee9ed944683ad  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/README.md
+
+## Evidence files produced by this run (committed in C2; sha256sums.txt excludes itself)
+Note: fence-post-commit.txt (root) is the battery/09 copy PLUS a trailing copy note appended when the root copy was created — the two differ by that note only, by design.
+
+54d32eecdf3eb7249361473a26a1f24d292840a9658a131bd47269f437a34b4d  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/01-pytest-coverage.log
+eaf6d1352972ba687c6a7f3fdd8f6b6d4e3b274411d94ec32474d8e6b908fcb1  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/02-mypy-strict.log
+dac2c0f70e46987980dba45e6b57c7fc201cc7a0dca14cb58eaf77b565185cc3  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/03-ruff-check.log
+32042d7719e8632fefdcb700f054b4edec1736b3ee6fff3875a2a4f4e6a358c0  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/04-golden-verify.log
+57f28a630642dbb707fb28b88f7e0f8a8b54569ba4e95abf54f37b3fdc8f2801  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/05-golden-verify-isolated.log
+2a67d4c6a2973875593b1c61866eddf0a0bd60d8fb1ba0f3a36797d329aa3afc  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/06-adversarial-linter-scoped.log
+c61befcef7a74405a54cb549b31f16e369d39bd416a3060c15b67b1b3edefc25  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/07-determinism.log
+1088e34789a561db75ad799fb12195a38cdc51fea59f3d243a909f3c3ac47ddc  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/08-exit70-sweep.log
+1b3acdd287ab4a7f0b7e1daad95f580cd79f753132c2733e08c7bfd1c31ded7c  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/battery/09-fence-post-commit.txt
+8de8ea6dcea5b8af77af29c5ce90bc3370ee5662e69f16d6de3d9d74079f8cb4  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/fence-post-commit.txt
+815a9f83e9ccf870d1252876d78bc09fc00d079d149922dd7c2b9ce631581bee  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/pr-body-update.txt
+3f04eacf594d4af8e35811052a7961e82e98e422ffff6f2a1bdb9f93efa795d8  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/preflight-first.txt
+8d77ccbc21ba6a14dbcbc264d14b7595b009b34724938b2fd74488e07b6430bd  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/README.md
+1826fd1faeb6836f1854278275d03cb488219df93ce20a966801681c14b0b724  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/repro-before-fix/defects-before-fix.txt
+e7cb255b6ff27dee2ded4ec89c68ce83dc8f69a9cd8b6939fa595e7fa0fab891  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/tdd/green-blocker1-linter.txt
+0e53b47b0a30edff1990f21d905579186068172ec626fa4bfed9bf486cf5ac94  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/tdd/green-blocker2-renderer.txt
+c86f413e17ad7daebf0cb0e0b3051f70ac368475d4ee07b3084949d1793f46a5  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/tdd/red-blocker1-linter.txt
+a9279a55eaf30609ddda8d882339f9ef075eebcefda4d4bece6454aed25c6c00  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/tdd/red-blocker2-renderer.txt

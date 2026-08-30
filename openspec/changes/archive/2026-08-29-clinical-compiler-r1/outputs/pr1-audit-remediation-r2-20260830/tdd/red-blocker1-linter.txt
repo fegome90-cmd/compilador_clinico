@@ -1,0 +1,8 @@
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_linter_conformance.py:41: in <module>
+    from clinical_compiler.linter.conformance import (
+E   ImportError: cannot import name 'LINTER_CANONICAL_BREAKING_CHARACTERS' from 'clinical_compiler.linter.conformance' (/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3/src/clinical_compiler/linter/conformance.py)
+=========================== short test summary info ============================
+ERROR tests/unit/test_linter_conformance.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.08s

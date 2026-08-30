@@ -1,0 +1,20 @@
+# Battery item 07-determinism — 2 cases x 2 hash seeds, stdout byte-compare
+target_sha: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+tree_before: [0] porcelain lines
+command: uv run clinical-compiler compile INPUT --mode NURSING_RECORD_TELEGRAPHIC --policy-seed tests/fixtures/policy-seed-sample.json ; PYTHONHASHSEED=0 vs PYTHONHASHSEED=12345 ; stdout+stderr byte-compared (cmp)
+utc_start: 2026-08-30T12:02:38Z
+note: an earlier attempt used a wrong flag (--input) and exited 2 vacuously; the log was restarted with the correct positional usage before any conclusion was drawn
+case=standard_mixed rc_seed0=0 rc_seed12345=0
+  stdout cmp: IDENTICAL
+  stderr cmp: IDENTICAL
+  stdout_sha256_seed0: e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc
+  stdout_bytes: 68
+case=pc1_unassessed_fc rc_seed0=0 rc_seed12345=0
+  stdout cmp: IDENTICAL
+  stderr cmp: IDENTICAL
+  stdout_sha256_seed0: 31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99
+  stdout_bytes: 62
+overall: BYTE-IDENTICAL
+utc_end: 2026-08-30T12:02:38Z
+exit_code: 0
+tree_after: [0] porcelain lines

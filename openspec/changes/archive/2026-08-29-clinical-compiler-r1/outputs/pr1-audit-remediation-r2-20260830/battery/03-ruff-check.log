@@ -1,0 +1,9 @@
+# Battery item 03-ruff-check — ruff check src tests
+target_sha: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+tree_before: [0] porcelain lines
+command: uv run ruff check src tests
+utc_start: 2026-08-30T12:01:23Z
+All checks passed!
+utc_end: 2026-08-30T12:01:23Z
+exit_code: 0
+tree_after: [0] porcelain lines

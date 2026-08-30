@@ -1,0 +1,5 @@
+E   ImportError: cannot import name 'MODE_ALLOWED_PRESENTATION_ROLES' from 'clinical_compiler.renderers.deterministic' (/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3/src/clinical_compiler/renderers/deterministic.py)
+=========================== short test summary info ============================
+ERROR tests/unit/test_renderers_deterministic.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.09s

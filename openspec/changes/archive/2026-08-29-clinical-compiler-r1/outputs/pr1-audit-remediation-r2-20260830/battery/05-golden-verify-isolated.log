@@ -1,0 +1,13 @@
+# Battery item 05-golden-verify-isolated — golden machinery verify under python -I (isolated, fresh hash seed)
+target_sha: b8c0c46b99290863faa6c4c42c10d947c40c6e51
+tree_before: [0] porcelain lines
+command: uv run python -I tests/golden/golden_machinery.py verify
+utc_start: 2026-08-30T12:01:37Z
+corpus_verified=True
+independent_sample_present=True
+overall_integrity=VALID
+phase3_gate_blocked=False
+reason=corpus verified and an independently authored expected sample is present — golden evidence is VALID
+utc_end: 2026-08-30T12:01:38Z
+exit_code: 0
+tree_after: [0] porcelain lines

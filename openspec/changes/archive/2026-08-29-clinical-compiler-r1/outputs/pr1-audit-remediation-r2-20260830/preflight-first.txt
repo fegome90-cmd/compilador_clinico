@@ -1,0 +1,30 @@
+# Preflight — PR1 audit remediation ROUND 2 (2026-08-30 UTC)
+Captured FIRST, before any fix, test, or battery command (ordering discipline per audit §1/Correction 2 of the prior run).
+
+Worktree: /Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3 (detached, expected aff8b219e197c4f04ff464f5ffe5a6b6e6bc05c8)
+Main tree /Users/felipe_gonzalez/Developer/compilador_clinico: NEVER touched by this run (its external uncommitted edit is preserved per owner disposition).
+
+$ git rev-parse HEAD
+aff8b219e197c4f04ff464f5ffe5a6b6e6bc05c8
+--- captured at 2026-08-30T11:48:14Z
+$ git status --porcelain
+?? openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/
+--- captured at 2026-08-30T11:48:14Z
+$ git log --oneline -1
+aff8b21 fix(linter,renderer): reject empty provenance and full control-char set; audit remediation evidence
+--- captured at 2026-08-30T11:48:14Z
+$ git worktree list
+/Users/felipe_gonzalez/Developer/compilador_clinico               cec43d3 [main]
+/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3 aff8b21 (detached HEAD)
+--- captured at 2026-08-30T11:48:14Z
+$ date -u +%Y-%m-%dT%H:%M:%SZ
+2026-08-30T11:48:14Z
+--- captured at 2026-08-30T11:48:14Z
+
+## Preflight state description (audit §1 wording, disposition 1)
+
+Tracked source tree CLEAN; the evidence directory
+(openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-r2-20260830/) is INTENTIONALLY UNTRACKED
+at capture time (it is committed later as the evidence-only commit C2). The porcelain line above shows exactly that single untracked evidence directory and nothing else — never describe this state as 'clean tree / no untracked files'.
+
+Appended at 2026-08-30T11:59:42Z — BEFORE any battery command existed.
