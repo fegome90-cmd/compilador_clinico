@@ -1,4 +1,4 @@
-"""Conformance linter — rendered bytes vs mode rules (tasks 3.4 + 3.5).
+r"""Conformance linter — rendered bytes vs mode rules (tasks 3.4 + 3.5).
 
 Sixth stage of the fixed pipeline order: validates the rendered
 document BYTES against the ``NURSING_RECORD_TELEGRAPHIC`` mode's
@@ -17,11 +17,13 @@ linter performs no I/O and never re-renders anything.
   (design D1).
 - Defense-in-depth positioning (CRC-004 / unit P3-U2 flag): the
   linter validates BYTES, not IR structures — it is the net AFTER
-  render. The renderer renders verbatim string values without policing
-  their content (an embedded newline or carriage return in a value or
-  ``source_ref`` produces rule-violating bytes); catching those bytes
-  is THIS stage's ownership. The rule set is exactly the frozen mode
-  rules — no rule the renderer cannot produce, no weakening of the
+  render. The renderer refuses line-break-carrying verbatim values and
+  ``source_ref``\s at render time (P0-1 injection closure), but it
+  does not police any other byte-level rule shape; and bytes can reach
+  this stage from anywhere a StageResult[bytes] can be built — so
+  catching rule-violating bytes remains THIS stage's ownership. The
+  rule set is exactly the frozen mode rules plus the P0-1 hardening —
+  no rule the renderer cannot produce cleanly, no weakening of the
   frozen invariants.
 - Frozen rule set (task 3.4 + design Determinism Mechanism #3 +
   P3-U2's frozen glyph vocabulary, to be committed by the first golden
@@ -30,10 +32,13 @@ linter performs no I/O and never re-renders anything.
      no trailing whitespace on any line; exactly one final newline.
   2. Line grammar — every line matches
      ``{field}: {glyph} [{missingness}] [{source_kind} {source_ref}]``
-     with the provenance segment optional (the unassessed
-     document-level line ``{field}: unknown [not_assessed]`` carries
-     no source). Lines parse right-anchored, so verbatim value glyphs
-     may themselves contain ``[...]`` segments and ``: ``.
+     with the provenance segment REQUIRED on every assessed line and
+     present ONLY on the unassessed document-level line
+     ``{field}: unknown [not_assessed]`` (P0-1 hardening: a
+     provenance-less assessed line is the injection residue of a
+     line-split value; the unassessed line carries no source). Lines
+     parse right-anchored, so verbatim value glyphs may themselves
+     contain ``[...]`` segments and ``: ``.
   3. Vocabulary tokens — ``field`` within the frozen input contract
      (design D5 explicitly allows linter → adapters.contract);
      ``missingness`` within the ``Missingness`` taxonomy;
@@ -43,6 +48,12 @@ linter performs no I/O and never re-renders anything.
      the explicit ``unknown``; ``PRESENT`` glyphs are unrestricted
      verbatim values (an empty string or a value spelling ``missing``
      is contract-admissible and therefore lint-clean).
+  5. Cross-line state (P0-1 hardening) — each field token at most
+     once per document: the telegraphic mode is one line per field,
+     and a repeated field line is the residue of an injected clinical
+     line (normalization yields at most one canonical fact per field,
+     so pipeline output can never produce this; the rule guards
+     hand-built/corrupt bytes).
 - FC-11 (task 3.5, linter half): the corpus class is "rendered output
   violates a mode conformance rule", exercised via injected violating
   bytes — one dedicated fixture per rule family (mutation-sensitive
@@ -66,7 +77,8 @@ linter performs no I/O and never re-renders anything.
 Determinism (design Determinism Mechanism): no time/locale/random/
 env dependence; checks run in a fixed order (mode, byte invariants,
 then lines ascending — within a line: trailing whitespace, grammar,
-vocabulary) so identical bytes yield byte-identical diagnostics.
+vocabulary; after each line: the cross-line one-line-per-field rule)
+so identical bytes yield byte-identical diagnostics.
 This stage never imports ``pipeline`` or ``passes`` (D5); its stage
 contract comes from :mod:`clinical_compiler.pipeline_types`.
 """
@@ -114,12 +126,15 @@ _LINE_RE: Final[re.Pattern[str]] = re.compile(
 )
 
 
-def _check_line(line: str, number: int) -> list[Diagnostic]:
+def _check_line(line: str, number: int) -> tuple[list[Diagnostic], str | None]:
     """Lint one decoded line, enumerating every rule it violates.
 
     Checks run in a fixed order — trailing whitespace, then the line
     grammar and its vocabulary/consistency rules — so identical lines
-    yield identical diagnostics in identical order.
+    yield identical diagnostics in identical order. Returns the
+    diagnostics plus the line's field token (``None`` when the grammar
+    does not match) so the caller can enforce the cross-line
+    one-line-per-field rule.
     """
     diagnostics: list[Diagnostic] = []
 
@@ -136,11 +151,10 @@ def _check_line(line: str, number: int) -> list[Diagnostic]:
         diagnostics.append(
             Diagnostic(
                 DiagnosticCode.LINT_FAILURE,
-                f"line {number}: does not match the telegraphic"
-                " line grammar",
+                f"line {number}: does not match the telegraphic line grammar",
             )
         )
-        return diagnostics
+        return diagnostics, None
 
     field: str = match.group("field")
     if field not in _CONTRACT_FIELDS:
@@ -153,6 +167,7 @@ def _check_line(line: str, number: int) -> list[Diagnostic]:
         )
 
     token: str = match.group("missingness")
+    source_kind: str | None = match.group("source_kind")
     if token not in _MISSINGNESS_TOKENS:
         diagnostics.append(
             Diagnostic(
@@ -173,8 +188,16 @@ def _check_line(line: str, number: int) -> list[Diagnostic]:
                     f" {token!r}",
                 )
             )
+        if Missingness(token) is not Missingness.NOT_ASSESSED and source_kind is None:
+            diagnostics.append(
+                Diagnostic(
+                    DiagnosticCode.LINT_FAILURE,
+                    f"line {number}: missingness {token!r} requires a"
+                    " provenance segment — only the unassessed"
+                    " [not_assessed] line carries no source (P0-1)",
+                )
+            )
 
-    source_kind: str | None = match.group("source_kind")
     if source_kind is not None and source_kind not in ALLOWED_SOURCE_KINDS:
         diagnostics.append(
             Diagnostic(
@@ -184,19 +207,18 @@ def _check_line(line: str, number: int) -> list[Diagnostic]:
             )
         )
 
-    return diagnostics
+    return diagnostics, field
 
 
-def lint_conformance(
-    document: bytes, document_mode: str
-) -> StageResult[bytes]:
+def lint_conformance(document: bytes, document_mode: str) -> StageResult[bytes]:
     """Validate rendered document bytes against the mode's rules.
 
     Runs the frozen rule set over the bytes — byte invariants first
     (exactly one final newline, LF-only, UTF-8 decodable), then every
     line in order (trailing whitespace, line grammar, vocabulary
-    tokens, glyph/missingness consistency) — enumerating one
-    ``LINT_FAILURE`` per violated rule (design D1).
+    tokens, glyph/missingness consistency, provenance requirement),
+    with the cross-line one-line-per-field rule enforced in line order
+    — enumerating one ``LINT_FAILURE`` per violated rule (design D1).
 
     Args:
         document: The rendered document bytes to validate.
@@ -235,8 +257,7 @@ def lint_conformance(
         diagnostics.append(
             Diagnostic(
                 DiagnosticCode.LINT_FAILURE,
-                "document contains a carriage return — mode output is"
-                " LF-only",
+                "document contains a carriage return — mode output is LF-only",
             )
         )
 
@@ -254,8 +275,20 @@ def lint_conformance(
     lines = text.split("\n")
     if document.endswith(b"\n"):
         lines = lines[:-1]
+    seen_fields: set[str] = set()
     for number, line in enumerate(lines, start=1):
-        diagnostics.extend(_check_line(line, number))
+        line_diagnostics, field = _check_line(line, number)
+        diagnostics.extend(line_diagnostics)
+        if field is not None:
+            if field in seen_fields:
+                diagnostics.append(
+                    Diagnostic(
+                        DiagnosticCode.LINT_FAILURE,
+                        f"line {number}: field {field!r} appears more"
+                        " than once — one line per field (P0-1)",
+                    )
+                )
+            seen_fields.add(field)
 
     if diagnostics:
         return StageResult(admitted=(), diagnostics=tuple(diagnostics))

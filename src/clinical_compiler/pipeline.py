@@ -51,6 +51,13 @@ readings of the frozen contract):
    the translation needs the state (adapters/seed.py's recorded
    ruling). Without the field, ``document=None, diagnostics=()`` would
    be indistinguishable from success-and-emit-nothing.
+4. ``CompileResult.source_asserted_certainties`` is added (P0-2
+   repair, owner instruction 2026-08-30): the input-contract spec
+   requires a declared certainty to be traceable, never silently
+   dropped — but ``run()`` discards the adapter wrapper at its
+   boundary, so the run()-level outcome needs the explicit per-fact
+   carrier (codepoint-sorted ``(fact_id, Certainty)`` pairs; only
+   facts with a declaration; never merged).
 
 Dependency rule (D5): this module imports everything below it —
 adapters, passes, renderers, linter, pipeline_types, core — and NOTHING
@@ -64,7 +71,8 @@ from typing import Final
 from clinical_compiler.adapters.seed import PolicyResolution
 from clinical_compiler.adapters.structured_feed import parse_feed
 from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
-from clinical_compiler.core.ir import CanonicalClinicalIR
+from clinical_compiler.core.ir import CanonicalClinicalIR, SourceFactIR
+from clinical_compiler.core.types import Certainty
 from clinical_compiler.linter.conformance import lint_conformance
 from clinical_compiler.passes.admissibility import run_admissibility
 from clinical_compiler.passes.document_selection import run_document_selection
@@ -138,6 +146,15 @@ class CompileResult:
             blocked state is observable at the shell (an unresolved
             resolution maps to the CLI's usage exit 2; it is a
             resolution state, not a ``DiagnosticCode``).
+        source_asserted_certainties: Per-source-fact declared
+            certainties that survived validation, as
+            ``(fact_id, Certainty)`` pairs codepoint-sorted by fact id
+            (P0-2 repair, owner instruction 2026-08-30 — the
+            composition boundary discards the adapter wrapper, so the
+            observable outcome carries the declarations explicitly;
+            only facts WITH a declaration appear, declarations are
+            never merged across facts, and the compiler-assigned
+            ``ClinicalValue.certainty`` axis is untouched).
 
     Construction-time invariants (fail-closed, mirroring
     ``PolicyResolution.__post_init__``): a document never coexists with
@@ -149,6 +166,7 @@ class CompileResult:
     document: bytes | None
     diagnostics: tuple[Diagnostic, ...]
     policy: PolicyResolution
+    source_asserted_certainties: tuple[tuple[str, Certainty], ...] = ()
 
     def __post_init__(self) -> None:
         if self.document is not None and self.diagnostics:
@@ -157,11 +175,7 @@ class CompileResult:
                 " emission is fail-closed: any diagnostic blocks the"
                 " document"
             )
-        if (
-            self.document is None
-            and not self.diagnostics
-            and self.policy.is_resolved
-        ):
+        if self.document is None and not self.diagnostics and self.policy.is_resolved:
             raise ValueError(
                 "CompileResult carries neither document nor"
                 " diagnostics under a RESOLVED policy — a clean run"
@@ -183,6 +197,26 @@ def derive_exit_code(diagnostics: tuple[Diagnostic, ...]) -> int:
         if code in present:
             return exit_code
     return 0
+
+
+def _declared_certainties(
+    facts: tuple[SourceFactIR, ...],
+) -> tuple[tuple[str, Certainty], ...]:
+    """Per-source-fact declared certainties, codepoint-sorted by id.
+
+    Traceability exposure (P0-2 repair, owner instruction 2026-08-30):
+    the certainty the SOURCE declared, preserved verbatim per fact —
+    never merged across facts (even corroborating ones), never
+    conflated with the compiler-assigned ``ClinicalValue.certainty``
+    axis (CRC-001/002), and never invented: a fact without a
+    declaration contributes no entry.
+    """
+    declared: list[tuple[str, Certainty]] = []
+    for fact in facts:
+        if fact.source_asserted_certainty is not None:
+            declared.append((fact.fact_id, fact.source_asserted_certainty))
+    declared.sort()
+    return tuple(declared)
 
 
 def run(request: CompileRequest) -> CompileResult:
@@ -219,18 +253,18 @@ def run(request: CompileRequest) -> CompileResult:
     diagnostics.extend(validated.diagnostics)
     normalized = run_semantic_normalization(validated.admitted)
     diagnostics.extend(normalized.diagnostics)
+    declared_certainties = _declared_certainties(validated.admitted)
 
     if not policy.is_resolved:
         return CompileResult(
             document=None,
             diagnostics=tuple(diagnostics),
             policy=policy,
+            source_asserted_certainties=declared_certainties,
         )
 
     source_fact_ids = frozenset(fact.fact_id for fact in validated.admitted)
-    admissible = run_admissibility(
-        normalized.admitted, policy.terms, source_fact_ids
-    )
+    admissible = run_admissibility(normalized.admitted, policy.terms, source_fact_ids)
     diagnostics.extend(admissible.diagnostics)
     canonical_ir = CanonicalClinicalIR(facts=admissible.admitted)
     selected = run_document_selection(canonical_ir, request.document_mode)
@@ -241,6 +275,7 @@ def run(request: CompileRequest) -> CompileResult:
             document=None,
             diagnostics=tuple(diagnostics),
             policy=policy,
+            source_asserted_certainties=declared_certainties,
         )
 
     rendered = render_document(selected.admitted[0], canonical_ir)
@@ -250,6 +285,7 @@ def run(request: CompileRequest) -> CompileResult:
             document=None,
             diagnostics=tuple(diagnostics),
             policy=policy,
+            source_asserted_certainties=declared_certainties,
         )
 
     linted = lint_conformance(rendered.admitted[0], request.document_mode)
@@ -259,10 +295,12 @@ def run(request: CompileRequest) -> CompileResult:
             document=None,
             diagnostics=tuple(diagnostics),
             policy=policy,
+            source_asserted_certainties=declared_certainties,
         )
 
     return CompileResult(
         document=linted.admitted[0],
         diagnostics=(),
         policy=policy,
+        source_asserted_certainties=declared_certainties,
     )

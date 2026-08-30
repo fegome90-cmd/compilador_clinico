@@ -33,26 +33,32 @@ never empty-set-and-continue.
   2) at the shell — translation from a blocked resolution to an exit
   code belongs to the composition root/CLI, never to this loader.
 - Faults (missing file, unreadable bytes/dir, malformed JSON, wrong
-  shape, non-string term, empty-string term) surface as
-  ``UNRESOLVED_POLICY`` with a typed :class:`PolicySeedFault` reason and
-  a deterministic human-readable detail — never as exceptions crossing
-  the adapter boundary, never as a populated-but-empty policy.
+  shape, non-string term, empty-string term, ZERO-TERM seed) surface
+  as ``UNRESOLVED_POLICY`` with a typed :class:`PolicySeedFault`
+  reason and a deterministic human-readable detail — never as
+  exceptions crossing the adapter boundary, never as a
+  populated-but-empty policy.
 - Determinism: the resolved set is a normalized ``frozenset`` —
   duplicates collapse, file-side order is irrelevant, identical inputs
   load identically. Details embed only deterministic data (the path as
   given, fixed messages, first offending entry index in file order).
 
-FLAGGED (owner review — under-specified seams, minimal faithful
-readings): (1) an owner-authored ``{"terms": []}`` seed loads as
-``POPULATED`` with an empty set — D7's "empty only via deferral" letter
-is read as governing the ABSENT/unreadable-seed path, since the seed
-file is by definition owner-authored and emptiness then traces to the
-owner's own artifact; a stricter reading would reject zero-term seeds
-at this boundary. (2) duplicate entries dedupe into the set (exact
-seed fidelity is set-level). (3) the empty-string term is rejected as
+REPAIRED FLAG (was owner review): an owner-authored ``{"terms": []}``
+seed loaded as ``POPULATED`` with an empty set (flagged 2026-08-29 as
+an under-specified seam). CLOSED by the owner repair instruction of
+2026-08-30 (P0-3): D7's letter is normative — the empty set is ONLY
+ever an APPROVED-BY-DEFERRAL state — so a zero-term seed now resolves
+``UNRESOLVED_POLICY`` with ``PolicySeedFault.EMPTY_TERMS`` (gate
+BLOCKED, CLI usage exit 2), and ``PolicyResolution.__post_init__``
+makes an empty ``POPULATED`` policy unrepresentable even via direct
+construction, mirroring the approved-empty invariants.
+
+FLAGGED (owner review — remaining under-specified seams, minimal
+faithful readings): (1) duplicate entries dedupe into the set (exact
+seed fidelity is set-level). (2) the empty-string term is rejected as
 ``EMPTY_TERM`` — structurally a degenerate term whose substring
 containment in :mod:`clinical_compiler.passes.admissibility` would
-vacuously veto every string-valued fact. (4) the spec prescribes no
+vacuously veto every string-valued fact. (3) the spec prescribes no
 split between UNRESOLVED_POLICY faults and usage errors at THIS layer;
 all loader faults report UNRESOLVED_POLICY and the exit-2 usage mapping
 is deferred to the CLI per the frozen Exit-Code Table.
@@ -96,6 +102,7 @@ class PolicySeedFault(StrEnum):
     WRONG_SHAPE = "WRONG_SHAPE"
     NON_STRING_TERM = "NON_STRING_TERM"
     EMPTY_TERM = "EMPTY_TERM"
+    EMPTY_TERMS = "EMPTY_TERMS"
 
 
 DEFERRED_BY_OWNER_DECISION: Final[str] = (
@@ -121,8 +128,10 @@ class PolicyResolution:
         state: The resolution state (populated / approved-empty-by-
             deferral / unresolved).
         terms: The effective veto set — carried ONLY by ``POPULATED``
-            (possibly empty for an owner-authored zero-term seed);
-            empty for the two non-populated states.
+            and then REQUIRED to be non-empty (P0-3: an empty POPULATED
+            policy is unrepresentable; emptiness exists only as
+            ``APPROVED_EMPTY_BY_DEFERRAL``); empty for the two
+            non-populated states.
         fault: The typed reason — present ONLY on ``UNRESOLVED_POLICY``.
         detail: Deterministic human-readable fault detail (loader
             output for the composition root's usage/diagnostic text).
@@ -148,6 +157,13 @@ class PolicyResolution:
 
     def __post_init__(self) -> None:
         if self.state is PolicyResolutionState.POPULATED:
+            if not self.terms:
+                raise ValueError(
+                    "POPULATED requires a non-empty term set — the empty"
+                    " set is only ever an APPROVED_EMPTY_BY_DEFERRAL"
+                    " state citing the durable owner decision (D7); a"
+                    " zero-term policy embodies no recorded decision"
+                )
             if self.fault is not None:
                 raise ValueError("POPULATED carries no fault")
             if self.deferral_reference is not None:
@@ -229,12 +245,14 @@ def load_policy_seed(path: str | Path) -> PolicyResolution:
 
     Reads the owner-authored JSON seed of exactly the shape
     ``{"terms": [...]}`` and resolves it per D7: a structurally valid
-    file yields ``POPULATED`` with the normalized term set; any fault —
-    missing file, unreadable bytes, malformed JSON, wrong shape,
-    non-string or empty-string term — yields ``UNRESOLVED_POLICY`` with
-    a typed fault (gate BLOCKED upstream; never an empty-and-continue
-    populated policy). Deterministic: duplicates collapse and file-side
-    order never changes the resolved set.
+    file with at least one term yields ``POPULATED`` with the
+    normalized term set; any fault — missing file, unreadable bytes,
+    malformed JSON, wrong shape, non-string or empty-string term, or a
+    ZERO-TERM seed (P0-3: emptiness is only ever approved-by-deferral)
+    — yields ``UNRESOLVED_POLICY`` with a typed fault (gate BLOCKED
+    upstream; never an empty-and-continue populated policy).
+    Deterministic: duplicates collapse and file-side order never
+    changes the resolved set.
     """
     seed_path = Path(path)
     try:
@@ -276,6 +294,14 @@ def load_policy_seed(path: str | Path) -> PolicyResolution:
             PolicySeedFault.WRONG_SHAPE,
             f"policy seed {str(seed_path)!r} 'terms' must be a list of"
             " strings",
+        )
+    if not terms_value:
+        return unresolved_policy(
+            PolicySeedFault.EMPTY_TERMS,
+            f"policy seed {str(seed_path)!r} carries no terms — the"
+            " empty veto set is only ever an APPROVED-BY-DEFERRAL state"
+            " citing the durable owner decision (D7); a zero-term seed"
+            " embodies no recorded owner decision",
         )
 
     terms: list[str] = []

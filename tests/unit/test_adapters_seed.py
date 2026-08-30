@@ -30,6 +30,7 @@ from clinical_compiler.adapters.seed import (
     PolicySeedFault,
     approved_empty_by_deferral,
     load_policy_seed,
+    populated_policy,
 )
 from clinical_compiler.core.diagnostics import DiagnosticCode
 from clinical_compiler.core.ir import CanonicalClinicalFact
@@ -103,6 +104,7 @@ def test_fault_vocabulary_is_frozen() -> None:
         "WRONG_SHAPE",
         "NON_STRING_TERM",
         "EMPTY_TERM",
+        "EMPTY_TERMS",
     }
 
 
@@ -151,19 +153,19 @@ def test_term_order_is_irrelevant(tmp_path: Path) -> None:
     assert forward.terms == shuffled.terms == frozenset({"t-a", "t-b", "t-c"})
 
 
-def test_empty_terms_seed_is_populated(tmp_path: Path) -> None:
-    """An owner-authored zero-term seed is structurally valid emptiness.
-
-    FLAGGED (owner review): D7's letter says the empty set is only ever an
-    APPROVED-BY-DEFERRAL state; this reading lets an explicitly provided,
-    owner-authored ``{"terms": []}`` seed resolve POPULATED-empty because
-    the loader validates STRUCTURE only and the seed file is by definition
-    owner-authored (the absent/unreadable path is the one D7 forbids).
-    """
+def test_empty_terms_seed_is_unresolved(tmp_path: Path) -> None:
+    """P0-3 repair (flipped from the pre-repair POPULATED pin): a
+    zero-term seed embodies NO recorded owner deferral decision, and
+    D7 is normative — the empty set is ONLY ever an
+    APPROVED-BY-DEFERRAL state. The loader blocks the gate as
+    ``UNRESOLVED_POLICY`` with the typed ``EMPTY_TERMS`` fault (the
+    CLI maps it to the usage exit 2), never a resolved-empty policy."""
     resolution = load_policy_seed(_seed_json(tmp_path, {"terms": []}))
-    assert resolution.state is PolicyResolutionState.POPULATED
+    assert resolution.state is PolicyResolutionState.UNRESOLVED_POLICY
+    assert resolution.fault is PolicySeedFault.EMPTY_TERMS
     assert resolution.terms == frozenset()
-    assert resolution.is_resolved
+    assert not resolution.is_resolved
+    assert resolution.detail  # deterministic human-readable message
 
 
 # --- Faults → UNRESOLVED_POLICY (blocked — never empty-set-and-continue) ------
@@ -359,6 +361,27 @@ def test_unresolved_requires_a_typed_fault() -> None:
             detail="no fault",
             deferral_reference=None,
         )
+
+
+def test_resolved_empty_policy_is_unrepresentable_except_by_deferral() -> None:
+    """P0-3: NO construction path yields a RESOLVED policy with an
+    empty veto set except the citation-checked deferral — the
+    POPULATED state refuses an empty term set outright, via the
+    factory and via raw construction alike (D7: a zero-term policy
+    embodies no recorded owner decision)."""
+    with pytest.raises(ValueError, match="non-empty"):
+        populated_policy(frozenset())
+    with pytest.raises(ValueError, match="non-empty"):
+        PolicyResolution(
+            state=PolicyResolutionState.POPULATED,
+            terms=frozenset(),
+            fault=None,
+            detail=None,
+            deferral_reference=None,
+        )
+    resolution = approved_empty_by_deferral(DEFERRED_BY_OWNER_DECISION)
+    assert resolution.terms == frozenset()
+    assert resolution.is_resolved
 
 
 # --- Integration point: loader output feeds run_admissibility -----------------

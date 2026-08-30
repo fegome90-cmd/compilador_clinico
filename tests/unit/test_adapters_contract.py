@@ -141,7 +141,8 @@ def test_unknown_key_is_input_contract_error() -> None:
 
 def test_non_string_key_is_input_contract_error() -> None:
     """Non-string keys never crash the evaluation; they are rejected."""
-    record: dict[str, object] = {**_record(), 7: "x"}
+    record: dict[object, object] = {7: "x"}
+    record.update(_record())
     assert _rejected_code(map_record(record)) is DiagnosticCode.INPUT_CONTRACT_ERROR
 
 
@@ -171,6 +172,34 @@ def test_non_string_identifier_is_input_contract_error(key: str) -> None:
     assert _rejected_code(map_record(_record(**{key: 7}))) is (
         DiagnosticCode.INPUT_CONTRACT_ERROR
     )
+
+
+def test_empty_fact_id_is_input_contract_error() -> None:
+    """``fact_id`` must be a NON-empty string (P1-1 repair).
+
+    The empty identifier is the IR's own lineage fault —
+    ``CanonicalClinicalIR`` rejects an empty ``source_fact_ref`` — so the
+    contract rejects the structural shape at the boundary as a mapped
+    diagnostic instead of letting it surface downstream as an unhandled
+    exception (input faults are mapped diagnostics; the exit-70 row is
+    the unexpected-exception catch-all, never a mapped input fault).
+    """
+    assert _rejected_code(map_record(_record(fact_id=""))) is (
+        DiagnosticCode.INPUT_CONTRACT_ERROR
+    )
+
+
+def test_empty_source_ref_is_input_contract_error() -> None:
+    """``source_ref`` must be a NON-empty string (P1-1 repair).
+
+    An empty reference would render the non-canonical provenance segment
+    ``[{source_kind} ]`` — inside provenance, the same structural
+    non-emptiness the fact identifier requires applies.
+    """
+    evaluation = map_record(
+        _record(provenance={"source_kind": "monitor", "source_ref": ""})
+    )
+    assert _rejected_code(evaluation) is DiagnosticCode.INPUT_CONTRACT_ERROR
 
 
 def test_field_outside_frozen_vocabulary_is_input_contract_error() -> None:
@@ -262,17 +291,29 @@ def test_invalid_source_asserted_certainty_is_input_contract_error(
     )
 
 
-def test_certainty_never_lands_on_the_source_fact_ir() -> None:
-    """Certainty stays on its own axis: the frozen IR has no slot for it."""
-    fact = _accepted(
-        map_record(_record(source_asserted_certainty="confirmed"))
-    ).fact
+def test_declared_certainty_lands_only_in_the_dedicated_ir_slot() -> None:
+    """P0-2 repair (re-specified from the pre-repair pin): the declared
+    certainty is stored VERBATIM in the IR's dedicated
+    ``source_asserted_certainty`` slot — and ONLY there. It never
+    contaminates the compiler-assigned axis: the normalizer assigns
+    ``ClinicalValue.certainty = UNRESOLVED`` for every fact (CRC-001),
+    and nothing reads the declaration back into the clinical value.
+
+    The pre-repair test pinned the ABSENCE of the slot, which is
+    exactly what hid the run()-level loss (the declaration was dropped
+    at the composition boundary, contradicting the input-contract
+    spec's traceability scenarios)."""
+    wrapper = _accepted(map_record(_record(source_asserted_certainty="confirmed")))
+    fact = wrapper.fact
     assert [field.name for field in fields(fact)] == [
         "fact_id",
         "field_id",
         "raw_value",
         "provenance",
+        "source_asserted_certainty",
     ]
+    assert fact.source_asserted_certainty is Certainty.CONFIRMED
+    assert wrapper.source_asserted_certainty is Certainty.CONFIRMED
 
 
 # --- Determinism / immutability -------------------------------------------------
@@ -294,10 +335,12 @@ def test_mapping_is_deterministic_and_key_order_independent() -> None:
 
 
 def test_structured_feed_fact_is_immutable() -> None:
-    """The mapped fact wrapper rejects mutation."""
+    """The wrapper and its sole stored fact reject mutation."""
     wrapped = _accepted(map_record(_record()))
     with pytest.raises(FrozenInstanceError):
-        wrapped.source_asserted_certainty = Certainty.CONFIRMED  # type: ignore[misc]
+        wrapped.fact = wrapped.fact  # type: ignore[misc]
+    with pytest.raises(FrozenInstanceError):
+        wrapped.fact.source_asserted_certainty = Certainty.CONFIRMED  # type: ignore[misc]
 
 
 def test_contract_evaluation_is_immutable() -> None:

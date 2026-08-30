@@ -14,10 +14,11 @@ of its own:
   here, and ``PROBABLE``/``LIKELY``/``UNLIKELY`` are NOT_PRODUCED.
 - Certainty authority (CRC-002 — BOTH_SEPARATED): this stage works on
   validated ``SourceFactIR`` only; a source-declared certainty travels
-  beside the facts on the adapter wrapper (role
-  ``clinical_source_assertion``, authority ``PRESERVED``) and never
-  enters this stage, so the compiler-assigned certainty axis can
-  neither conflate with nor silently upgrade it. ``source_kind``
+  on the fact itself, in the dedicated ``source_asserted_certainty``
+  slot (P0-2 repair — role ``clinical_source_assertion``, authority
+  ``PRESERVED``), and never enters this stage's
+  ``ClinicalValue.certainty``, so the compiler-assigned certainty axis
+  can neither conflate with nor silently upgrade it. ``source_kind``
   informs PROVENANCE only — it is never consulted for certainty and
   never breaks an equal-authority tie.
 - Missingness (design D8): a present raw value → ``PRESENT`` verbatim;

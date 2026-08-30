@@ -43,6 +43,10 @@ from clinical_compiler.adapters.seed import (
     load_policy_seed,
 )
 from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+from clinical_compiler.core.types import Certainty
+from clinical_compiler.linter.conformance import (
+    lint_conformance as real_lint_conformance,
+)
 from clinical_compiler.passes.document_selection import (
     NURSING_RECORD_TELEGRAPHIC,
 )
@@ -54,6 +58,9 @@ from clinical_compiler.pipeline import (
     run,
 )
 from clinical_compiler.pipeline_types import StageResult as LeafStageResult
+from clinical_compiler.renderers.deterministic import (
+    render_document as real_render_document,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -102,9 +109,7 @@ def _deferred_empty_policy() -> PolicyResolution:
     return approved_empty_by_deferral(DEFERRED_BY_OWNER_DECISION)
 
 
-def _request(
-    data: bytes, policy: PolicyResolution | None = None
-) -> CompileRequest:
+def _request(data: bytes, policy: PolicyResolution | None = None) -> CompileRequest:
     """Build a compile request for the R1 mode over the given bytes."""
     return CompileRequest(
         data=data,
@@ -115,9 +120,7 @@ def _request(
 
 def _load_machinery() -> ModuleType:
     """Load ``golden_machinery.py`` by file path (the task-3.8 pattern)."""
-    spec = importlib.util.spec_from_file_location(
-        "golden_machinery", _MACHINERY_PATH
-    )
+    spec = importlib.util.spec_from_file_location("golden_machinery", _MACHINERY_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -126,9 +129,7 @@ def _load_machinery() -> ModuleType:
 
 def _golden_scenarios() -> tuple[tuple[str, bytes, bytes], ...]:
     """The committed golden scenarios: (name, input bytes, document bytes)."""
-    manifest = json.loads(
-        (_GOLDEN_ROOT / "manifest.json").read_text(encoding="utf-8")
-    )
+    manifest = json.loads((_GOLDEN_ROOT / "manifest.json").read_text(encoding="utf-8"))
     return tuple(
         (
             str(entry["name"]),
@@ -182,9 +183,7 @@ def test_two_identical_runs_produce_identical_results() -> None:
 # --- 2. Golden equivalence: the production composition IS the chain -------
 
 
-@pytest.mark.parametrize(
-    "scenario", [scenario[0] for scenario in _golden_scenarios()]
-)
+@pytest.mark.parametrize("scenario", [scenario[0] for scenario in _golden_scenarios()])
 def test_pipeline_reproduces_golden_machinery_and_committed_bytes(
     scenario: str,
 ) -> None:
@@ -276,6 +275,22 @@ def test_pipeline_reproduces_golden_machinery_and_committed_bytes(
             DiagnosticCode.DOCUMENT_SELECTION_ERROR,
             8,
         ),
+        (
+            "P1-1 empty fact_id — mapped input fault, never an IR exception",
+            _feed(_line(_record(fact_id=""))),
+            None,
+            DiagnosticCode.INPUT_CONTRACT_ERROR,
+            3,
+        ),
+        (
+            "P1-1 empty source_ref — mapped input fault",
+            _feed(
+                _line(_record(provenance={"source_kind": "monitor", "source_ref": ""}))
+            ),
+            None,
+            DiagnosticCode.INPUT_CONTRACT_ERROR,
+            3,
+        ),
     ],
 )
 def test_any_diagnostic_yields_no_document_and_the_family_exit_code(
@@ -292,6 +307,139 @@ def test_any_diagnostic_yields_no_document_and_the_family_exit_code(
     assert result.document is None, label
     assert expected_code in codes, label
     assert derive_exit_code(result.diagnostics) == expected_exit
+
+
+def test_contract_valid_multiline_value_cannot_inject_second_clinical_line() -> None:
+    """P0-1 (injection closure, fail-closed): a contract-VALID TA value
+    containing a line break must never emit a second clinical line that
+    borrows the document's line grammar and another fact's provenance.
+    The renderer refuses the verbatim value (RENDER_ERROR) and the run
+    emits NO document — so no fabricated ``FC: 200`` line can exist
+    anywhere in the output (the injected line resolves to no source
+    fact; provenance traceability spec)."""
+    result = run(
+        _request(
+            _feed(
+                _line(
+                    _record(
+                        fact_id="ta-multi",
+                        field_id="TA",
+                        raw_value="72 [present]\nFC: 200",
+                    )
+                )
+            )
+        )
+    )
+
+    assert result.document is None
+    assert DiagnosticCode.RENDER_ERROR in tuple(
+        diagnostic.code for diagnostic in result.diagnostics
+    )
+
+
+# --- 3b. P0-2: declared-certainty traceability at the run() boundary ----------
+
+
+def test_source_asserted_certainty_is_traceable_across_the_run() -> None:
+    """P0-2: a source-declared certainty survives the whole run, per
+    SOURCE fact, observable on the result — declared CONFIRMED /
+    PROBABLE in, the same values out, codepoint-sorted by fact id,
+    never merged and never dropped (input-contract spec: the declared
+    certainty is never silently dropped)."""
+    result = run(
+        _request(
+            _feed(
+                _line(
+                    _record(
+                        fact_id="raw-ta-1",
+                        field_id="TA",
+                        raw_value="120/80",
+                        source_asserted_certainty="confirmed",
+                    )
+                ),
+                _line(
+                    _record(
+                        fact_id="raw-fc-1",
+                        raw_value=72,
+                        source_asserted_certainty="probable",
+                    )
+                ),
+            )
+        )
+    )
+
+    assert result.document is not None
+    assert result.source_asserted_certainties == (
+        ("raw-fc-1", Certainty.PROBABLE),
+        ("raw-ta-1", Certainty.CONFIRMED),
+    )
+
+
+def test_undeclared_facts_contribute_no_certainty_entry() -> None:
+    """P0-2: the slot is never invented — a fact without a declaration
+    contributes nothing to the traceability exposure."""
+    result = run(_request(_feed(_line(_record(fact_id="raw-1")))))
+
+    assert result.document is not None
+    assert result.source_asserted_certainties == ()
+
+
+def test_corroborating_facts_keep_their_own_declarations() -> None:
+    """P0-2: declarations are per SOURCE fact — even when two facts
+    corroborate into ONE canonical fact, their declarations stay
+    distinct entries on the traceability axis (never merged)."""
+    result = run(
+        _request(
+            _feed(
+                _line(
+                    _record(
+                        fact_id="raw-a",
+                        raw_value=72,
+                        source_asserted_certainty="confirmed",
+                    )
+                ),
+                _line(
+                    _record(
+                        fact_id="raw-b",
+                        raw_value=72.0,
+                        source_asserted_certainty="probable",
+                    )
+                ),
+            )
+        )
+    )
+
+    assert result.document is not None
+    assert result.source_asserted_certainties == (
+        ("raw-a", Certainty.CONFIRMED),
+        ("raw-b", Certainty.PROBABLE),
+    )
+
+
+def test_both_certainty_authorities_stay_distinct_at_the_run_boundary() -> None:
+    """P0-2 / CRC-001+002: the two certainty axes never merge — the
+    source's declaration is observable per fact in
+    ``source_asserted_certainties`` while the compiler-assigned axis
+    is untouched (every ``ClinicalValue.certainty`` stays UNRESOLVED,
+    pinned at the normalizer unit; observably here: no certainty word
+    ever reaches the rendered document)."""
+    result = run(
+        _request(
+            _feed(
+                _line(
+                    _record(
+                        fact_id="raw-fc-1",
+                        raw_value=72,
+                        source_asserted_certainty="confirmed",
+                    )
+                )
+            )
+        )
+    )
+
+    assert result.source_asserted_certainties == (("raw-fc-1", Certainty.CONFIRMED),)
+    assert result.document is not None
+    assert b"confirmed" not in result.document
 
 
 # --- 4. Min-precedence across stages (earliest fault explains the rest) ---
@@ -504,8 +652,8 @@ def test_clean_accumulator_reaches_render_and_lint(
     """Mutation sensitivity: on a clean run render and lint ARE invoked
     (spies delegate to the real stages) — removing either call from the
     composition fails this test."""
-    real_render = pipeline.render_document
-    real_lint = pipeline.lint_conformance
+    real_render = real_render_document
+    real_lint = real_lint_conformance
     render_calls: list[object] = []
     lint_calls: list[object] = []
 
@@ -560,9 +708,7 @@ def test_injected_render_fault_blocks_the_run_before_lint(
     result = run(_request(data))
 
     assert result.document is None
-    assert tuple(d.code for d in result.diagnostics) == (
-        DiagnosticCode.RENDER_ERROR,
-    )
+    assert tuple(d.code for d in result.diagnostics) == (DiagnosticCode.RENDER_ERROR,)
     assert lint_calls == []
     assert derive_exit_code(result.diagnostics) == 9
 
@@ -573,7 +719,7 @@ def test_injected_lint_failure_blocks_the_run(
     """FC-11 at the composition seam: only lint-clean output is accepted
     as final — a lint stage reporting LINT_FAILURE yields no document
     and exit code 10."""
-    real_render = pipeline.render_document
+    real_render = real_render_document
     render_calls: list[object] = []
 
     def _render_spy(*args: object) -> object:
@@ -594,7 +740,5 @@ def test_injected_lint_failure_blocks_the_run(
 
     assert len(render_calls) == 1
     assert result.document is None
-    assert tuple(d.code for d in result.diagnostics) == (
-        DiagnosticCode.LINT_FAILURE,
-    )
+    assert tuple(d.code for d in result.diagnostics) == (DiagnosticCode.LINT_FAILURE,)
     assert derive_exit_code(result.diagnostics) == 10

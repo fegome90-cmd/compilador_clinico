@@ -30,6 +30,7 @@ yields identical bytes and exit code across hash seeds (Mechanism #4).
 """
 
 import json
+import os
 import subprocess
 import sys
 import tomllib
@@ -39,7 +40,10 @@ from typing import Final
 import pytest
 
 from clinical_compiler import cli, pipeline
-from clinical_compiler.adapters.seed import DEFERRED_BY_OWNER_DECISION
+from clinical_compiler.adapters.seed import (
+    DEFERRED_BY_OWNER_DECISION,
+    approved_empty_by_deferral,
+)
 from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
 from clinical_compiler.pipeline_types import StageResult
 
@@ -53,14 +57,11 @@ _SEED_FIXTURE: Final[Path] = (
 )
 
 _DRIVER: Final[str] = (
-    "import sys;"
-    " from clinical_compiler.cli import main;"
-    " sys.exit(main(sys.argv[1:]))"
+    "import sys; from clinical_compiler.cli import main; sys.exit(main(sys.argv[1:]))"
 )
 
 _HAPPY_DOCUMENT: Final[bytes] = (
-    b"FC: 80.5 [present] [monitor m-9]\n"
-    b"TA: 120/80 [present] [monitor m-9]\n"
+    b"FC: 80.5 [present] [monitor m-9]\nTA: 120/80 [present] [monitor m-9]\n"
 )
 
 
@@ -185,7 +186,7 @@ def test_absent_seed_runs_the_deferral_approved_empty_policy(
     the approved-empty policy citing the durable ``DEFERRED_BY_OWNER``
     decision — removing the citation breaks this test (mutation)."""
     citations: list[str] = []
-    real = cli.approved_empty_by_deferral
+    real = approved_empty_by_deferral
 
     def _spy(decision_record: str) -> object:
         citations.append(decision_record)
@@ -204,9 +205,7 @@ def test_valid_seed_file_compiles_clean(tmp_path: Path) -> None:
     """A structurally valid owner seed loads and the compile succeeds."""
     feed = _write_feed(tmp_path, _happy_feed())
 
-    completed = _run_cli(
-        "compile", str(feed), "--policy-seed", str(_SEED_FIXTURE)
-    )
+    completed = _run_cli("compile", str(feed), "--policy-seed", str(_SEED_FIXTURE))
 
     assert completed.returncode == 0
     assert completed.stdout == _HAPPY_DOCUMENT
@@ -265,6 +264,37 @@ def test_valid_seed_file_compiles_clean(tmp_path: Path) -> None:
             b"DOCUMENT_SELECTION_ERROR:",
             8,
         ),
+        (
+            "P1-1 empty fact_id maps to the input family (never exit 70)",
+            _feed(_line(_record(fact_id=""))),
+            None,
+            b"INPUT_CONTRACT_ERROR:",
+            3,
+        ),
+        (
+            "P1-1 empty source_ref maps to the input family (never exit 70)",
+            _feed(
+                _line(_record(provenance={"source_kind": "monitor", "source_ref": ""}))
+            ),
+            None,
+            b"INPUT_CONTRACT_ERROR:",
+            3,
+        ),
+        (
+            "P0-1 multiline value → RENDER_ERROR (no injected second line)",
+            _feed(
+                _line(
+                    _record(
+                        fact_id="ta-multi",
+                        field_id="TA",
+                        raw_value="72 [present]\nFC: 200",
+                    )
+                )
+            ),
+            None,
+            b"RENDER_ERROR:",
+            9,
+        ),
     ],
 )
 def test_fault_corpus_exits_its_family_code_and_never_emits_a_document(
@@ -290,9 +320,10 @@ def test_fault_corpus_exits_its_family_code_and_never_emits_a_document(
     assert not output.exists(), label
     stderr_lines = completed.stderr.decode("utf-8").splitlines()
     assert stderr_lines, label
-    assert any(
-        line.startswith(code.decode("utf-8")) for line in stderr_lines
-    ), (label, stderr_lines)
+    assert any(line.startswith(code.decode("utf-8")) for line in stderr_lines), (
+        label,
+        stderr_lines,
+    )
 
 
 def test_seed_fault_yields_the_unresolved_policy_usage_line(
@@ -312,9 +343,7 @@ def test_seed_fault_yields_the_unresolved_policy_usage_line(
     feed = _write_feed(tmp_path, _happy_feed())
     missing_seed = tmp_path / "no-such-seed.json"
 
-    exit_code = cli.main(
-        ["compile", str(feed), "--policy-seed", str(missing_seed)]
-    )
+    exit_code = cli.main(["compile", str(feed), "--policy-seed", str(missing_seed)])
 
     captured = capsysbinary.readouterr()
     assert exit_code == 2
@@ -347,9 +376,22 @@ def test_malformed_seed_is_a_usage_exit(tmp_path: Path) -> None:
     broken = tmp_path / "broken-seed.json"
     broken.write_bytes(b"{not json")
 
-    completed = _run_cli(
-        "compile", str(feed), "--policy-seed", str(broken)
-    )
+    completed = _run_cli("compile", str(feed), "--policy-seed", str(broken))
+
+    assert completed.returncode == 2
+    assert completed.stdout == b""
+    assert completed.stderr.startswith(b"UNRESOLVED_POLICY:")
+
+
+def test_empty_terms_seed_is_a_usage_exit(tmp_path: Path) -> None:
+    """P0-3: a zero-term seed resolves UNRESOLVED_POLICY — exit 2 with
+    the stable stderr line, never a resolved empty policy (D7: the
+    empty set is only ever APPROVED-BY-DEFERRAL)."""
+    feed = _write_feed(tmp_path, _happy_feed())
+    empty = tmp_path / "empty-seed.json"
+    empty.write_bytes(b'{"terms": []}')
+
+    completed = _run_cli("compile", str(feed), "--policy-seed", str(empty))
 
     assert completed.returncode == 2
     assert completed.stdout == b""
@@ -395,7 +437,7 @@ def test_usage_faults_exit_two_without_emitting_anything(
     feed = _write_feed(tmp_path, _happy_feed())
     argv = argv_builder(feed)  # type: ignore[operator]
 
-    completed = _run_cli(*argv)  # type: ignore[arg-type]
+    completed = _run_cli(*argv)
 
     assert completed.returncode == 2, label
     assert completed.stdout == b"", label
@@ -425,9 +467,7 @@ def test_unreadable_input_returns_two_in_process(
     usage prefix on stderr (frozen table: no compile attempted)."""
     feed = _write_feed(tmp_path, _happy_feed())
 
-    exit_code = cli.main(
-        ["compile", str(feed.parent / "absent.jsonl")]
-    )
+    exit_code = cli.main(["compile", str(feed.parent / "absent.jsonl")])
 
     captured = capsysbinary.readouterr()
     assert exit_code == 2
@@ -497,6 +537,7 @@ def test_unexpected_exception_is_fail_closed_exit_seventy(
     """The catch-all: an unexpected exception inside the composition
     becomes exit 70 with a best-effort stderr line — never 0, never a
     bare traceback, never document bytes."""
+
     def _explode(*args: object) -> object:
         raise RuntimeError("injected composition fault")
 
@@ -520,6 +561,7 @@ def test_unrepresentable_empty_outcome_never_exits_zero(
     """Defense-in-depth belt at the shell: a run reporting neither
     document nor diagnostics (unrepresentable per CompileResult) still
     cannot exit 0 — the CLI fails closed at 70."""
+
     class _Stub:
         document = None
         diagnostics: tuple[Diagnostic, ...] = ()
@@ -543,10 +585,11 @@ def test_atomic_write_cleans_the_temp_file_on_write_failure(
     """A failed ``os.replace`` leaves NO temp artifact behind, emits no
     document bytes anywhere, and surfaces as exit 70 (not a usage row —
     the destination fault is not one of the frozen exit-2 triggers)."""
+
     def _broken_replace(src: object, dst: object) -> None:
         raise OSError("injected replace failure")
 
-    monkeypatch.setattr(cli.os, "replace", _broken_replace)
+    monkeypatch.setattr(os, "replace", _broken_replace)
     feed = _write_feed(tmp_path, _happy_feed())
     output = tmp_path / "document.txt"
 
@@ -642,9 +685,7 @@ def test_main_is_callable_and_entry_target_exists() -> None:
             "TYPE_ERROR: bad value",
         ),
         (
-            Diagnostic(
-                DiagnosticCode.INPUT_CONTRACT_ERROR, "missing key", "in.jsonl"
-            ),
+            Diagnostic(DiagnosticCode.INPUT_CONTRACT_ERROR, "missing key", "in.jsonl"),
             "INPUT_CONTRACT_ERROR: missing key (in.jsonl)",
         ),
     ],

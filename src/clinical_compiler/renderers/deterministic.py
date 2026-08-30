@@ -26,7 +26,13 @@ renderer's — the renderer is bytes-out only).
   has no canonical rendering (anything beyond ``str``/``int``/
   ``float`` by exact type — a ``dict``/``set`` ``str()`` would leak
   iteration order into the output) fails closed as ``RENDER_ERROR``
-  rather than producing nondeterministic bytes.
+  rather than producing nondeterministic bytes. The same closure
+  covers CONTENT that has no canonical single-line rendering (P0-1
+  injection closure): a verbatim string value or ``source_ref``
+  carrying a line break (LF/CR) would inject a fabricated document
+  line or split the provenance segment, so it is refused — verbatim
+  values are never rewritten or escaped (input-contract spec), they
+  fail closed.
 - Entry order: ``DocumentEntry`` carries no ``field_id``, so the
   renderer resolves each entry's fact and sorts ALL lines by the
   resolved ``(field_id, clinical_fact_id)`` codepoint key itself — it
@@ -73,13 +79,28 @@ __all__ = ["render_document"]
 _UNASSESSED_GLYPH: str = "unknown"
 
 
+def _has_line_break(text: str) -> bool:
+    """Whether ``text`` carries a line-break character (LF or CR).
+
+    A verbatim string carrying one has no canonical single-line
+    rendering: a document line is the atomic unit of the telegraphic
+    mode, and rendering such a string verbatim would let it borrow the
+    line grammar and fabricate clinical lines (P0-1 injection closure).
+    Values are never rewritten or escaped — they fail closed.
+    """
+    return "\n" in text or "\r" in text
+
+
 def _value_glyph(value: ClinicalValue) -> str | None:
     """Canonical glyph for one clinical value, or ``None`` if the
     value type has no canonical rendering.
 
     ``PRESENT`` values render verbatim under Determinism Mechanism #3:
     ``str(int)`` and the deterministic shortest ``str(float)``
-    (locale-free, never locale ``format()``); strings verbatim. Exact
+    (locale-free, never locale ``format()``); strings verbatim — but a
+    string carrying a line break (LF or CR) has NO canonical rendering:
+    it would inject a second document line borrowing the grammar and
+    provenance of another fact, so it fails closed (P0-1). Exact
     runtime types only — anything else (``bool`` included, and any
     container whose ``str()`` would leak iteration order) has no
     canonical rendering. The absence families render the taxonomy's
@@ -90,6 +111,8 @@ def _value_glyph(value: ClinicalValue) -> str | None:
     if value.missingness is Missingness.PRESENT:
         raw = value.value
         if type(raw) is str or type(raw) is int or type(raw) is float:
+            if type(raw) is str and _has_line_break(raw):
+                return None
             return str(raw)
         return None
     if value.missingness is Missingness.MISSING:
@@ -166,17 +189,35 @@ def render_document(
             continue
         glyph = _value_glyph(fact.value)
         if glyph is None:
+            value = fact.value.value
+            if type(value) is str:
+                detail = (
+                    "contains a line break — no canonical single-line"
+                    " rendering exists for a verbatim value (P0-1)"
+                )
+            else:
+                detail = "has no canonical rendering"
             diagnostics.append(
                 Diagnostic(
                     DiagnosticCode.RENDER_ERROR,
                     f"canonical fact {fact.clinical_fact_id!r}"
                     f" ({fact.field_id!r}) carries a value of type"
-                    f" {type(fact.value.value).__name__!r} that has no"
-                    " canonical rendering",
+                    f" {type(value).__name__!r} that {detail}",
                 )
             )
             continue
         provenance = fact.value.provenance
+        if _has_line_break(provenance.source_ref):
+            diagnostics.append(
+                Diagnostic(
+                    DiagnosticCode.RENDER_ERROR,
+                    f"canonical fact {fact.clinical_fact_id!r}"
+                    f" ({fact.field_id!r}) carries a source_ref"
+                    " containing a line break — the provenance segment"
+                    " has no canonical single-line rendering (P0-1)",
+                )
+            )
+            continue
         line = (
             f"{fact.field_id}: {glyph} [{fact.value.missingness.value}]"
             f" [{provenance.source_kind} {provenance.source_ref}]"

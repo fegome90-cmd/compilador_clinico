@@ -39,10 +39,10 @@ def _violation(fact: SourceFactIR) -> Diagnostic | None:
     so a fact with several violations reports the same first fault the
     record-level mapping would.
     """
-    if not isinstance(fact.fact_id, str):
+    if not isinstance(fact.fact_id, str) or not fact.fact_id:
         return Diagnostic(
             DiagnosticCode.INPUT_CONTRACT_ERROR,
-            "fact_id must be a string",
+            "fact_id must be a non-empty string",
         )
     if not isinstance(fact.field_id, str):
         return Diagnostic(
@@ -71,10 +71,10 @@ def _violation(fact: SourceFactIR) -> Diagnostic | None:
             DiagnosticCode.INPUT_CONTRACT_ERROR,
             f"source_kind {provenance.source_kind!r} outside the frozen vocabulary",
         )
-    if not isinstance(provenance.source_ref, str):
+    if not isinstance(provenance.source_ref, str) or not provenance.source_ref:
         return Diagnostic(
             DiagnosticCode.INPUT_CONTRACT_ERROR,
-            "source_ref must be a string",
+            "source_ref must be a non-empty string",
         )
     raw_value = fact.raw_value
     if raw_value is not None and type(raw_value) not in field_contract.raw_value_types:

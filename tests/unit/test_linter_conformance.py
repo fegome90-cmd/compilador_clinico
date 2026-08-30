@@ -23,6 +23,8 @@ frozen renderer produces, neither inventing rules nor weakening them.
 
 from typing import cast
 
+import pytest
+
 from clinical_compiler.core.diagnostics import DiagnosticCode
 from clinical_compiler.core.ir import (
     CanonicalClinicalFact,
@@ -97,7 +99,9 @@ def _rendered(
     document = DocumentIR(
         document_mode=MODE,
         entries=tuple(
-            DocumentEntry(clinical_fact_ref=fact.clinical_fact_id, presentation_role=ROLE)
+            DocumentEntry(
+                clinical_fact_ref=fact.clinical_fact_id, presentation_role=ROLE
+            )
             for fact in facts
         ),
     )
@@ -137,44 +141,65 @@ def test_clean_rendered_document_lints_clean_and_is_accepted() -> None:
 
 
 def test_every_glyph_family_renders_and_lints_clean() -> None:
-    """One document exercising every frozen glyph family — present
-    int/float/unicode string, assessed absence (missing,
-    not_applicable), the unassessed family (unknown, not_assessed
-    fact), and the unassessed document-level sweep — all lint clean."""
-    facts: tuple[CanonicalClinicalFact, ...] = (
-        _canonical_fact(
-            clinical_fact_id="c-ta-1",
-            value=_clinical_value(value="120/80 mmHg — reposo"),
+    """One lint-clean document per glyph family — present int/unicode
+    string, present float and assessed absence (missing), the unassessed
+    fact families (not_assessed, not_applicable) — all lint clean. The
+    hardened mode admits at most ONE line per field (P0-1), so families
+    are grouped into documents of distinct fields; the unassessed
+    document-level sweep has its own pin
+    (:func:`test_all_unassessed_document_lints_clean`)."""
+    documents = (
+        _rendered(
+            (
+                _fc_fact("c-fc-1"),
+                _canonical_fact(
+                    clinical_fact_id="c-ta-1",
+                    value=_clinical_value(value="120/80 mmHg — reposo"),
+                ),
+            )
         ),
-        _canonical_fact(
-            clinical_fact_id="c-ta-2",
-            value=_clinical_value(
-                value=None,
-                missingness=Missingness.MISSING,
-                provenance=Provenance(source_kind="lab", source_ref="l-3"),
-            ),
+        _rendered(
+            (
+                _canonical_fact(
+                    clinical_fact_id="c-fc-2",
+                    field_id="FC",
+                    value=_clinical_value(
+                        value=72.5,
+                        provenance=Provenance(source_kind="monitor", source_ref="m-2"),
+                    ),
+                ),
+                _canonical_fact(
+                    clinical_fact_id="c-ta-2",
+                    value=_clinical_value(
+                        value=None,
+                        missingness=Missingness.MISSING,
+                        provenance=Provenance(source_kind="lab", source_ref="l-3"),
+                    ),
+                ),
+            )
         ),
-        _fc_fact("c-fc-1"),
-        _canonical_fact(
-            clinical_fact_id="c-fc-2",
-            field_id="FC",
-            value=_clinical_value(
-                value=72.5,
-                provenance=Provenance(source_kind="monitor", source_ref="m-2"),
-            ),
-        ),
-        _canonical_fact(
-            clinical_fact_id="c-fc-3",
-            field_id="FC",
-            value=_clinical_value(
-                value=None, missingness=Missingness.NOT_ASSESSED
-            ),
+        _rendered(
+            (
+                _canonical_fact(
+                    clinical_fact_id="c-fc-3",
+                    field_id="FC",
+                    value=_clinical_value(
+                        value=None, missingness=Missingness.NOT_ASSESSED
+                    ),
+                ),
+                _canonical_fact(
+                    clinical_fact_id="c-ta-3",
+                    value=_clinical_value(
+                        value=None, missingness=Missingness.NOT_APPLICABLE
+                    ),
+                ),
+            )
         ),
     )
-    document = _rendered(facts)
-    result = _lint(document)
-    assert result.diagnostics == ()
-    assert result.admitted == (document,)
+    for document in documents:
+        result = _lint(document)
+        assert result.diagnostics == ()
+        assert result.admitted == (document,)
 
 
 def test_all_unassessed_document_lints_clean() -> None:
@@ -274,11 +299,7 @@ def test_doubled_final_newline_yields_lint_failure() -> None:
 def test_blank_line_inside_document_yields_lint_failure() -> None:
     """A blank line in the middle of the document fails the line
     grammar (a line must carry ``{field}: ...``)."""
-    document = (
-        b"FC: 72 [present] [monitor m-1]\n"
-        b"\n"
-        b"TA: 120/80 [present] [monitor m-1]\n"
-    )
+    document = b"FC: 72 [present] [monitor m-1]\n\nTA: 120/80 [present] [monitor m-1]\n"
     result = _lint(document)
     assert DiagnosticCode.LINT_FAILURE in _codes(result)
     assert result.admitted == ()
@@ -407,20 +428,18 @@ def test_unknown_requires_the_unknown_glyph() -> None:
     assert result.admitted == ()
 
 
-# --- FC-11 via the real renderer: values the renderer does not police -----------
+# --- FC-11 via the byte-level net: the P0-1 injection seams ---------------------
 
 
-def test_rendered_value_with_embedded_newline_yields_lint_failure() -> None:
-    """The renderer renders verbatim string values without policing
-    their content (P3-U2 flag) — a value containing a newline breaks
-    the line grammar in the BYTES, and the linter (defense-in-depth,
-    FC-11) must catch it: every broken line is enumerated."""
-    fact = _canonical_fact(value=_clinical_value(value="72\nbpm"))
-    document = _rendered((fact,))
-    assert document == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: 72\n"
-        b"bpm [present] [clinical_note n-1]\n"
+def test_injected_multiline_value_bytes_yield_lint_failure() -> None:
+    """FC-11 byte-level net over the P0-1 seam: the renderer refuses a
+    line-break-carrying value outright (RENDER_ERROR — renderer unit),
+    so these are the bytes a broken renderer would have produced; the
+    linter must still reject every injected fragment — the
+    provenance-less ``TA: 72`` line and the field-less ``bpm ...`` line
+    are each enumerated, never accepted."""
+    document = (
+        b"FC: unknown [not_assessed]\nTA: 72\nbpm [present] [clinical_note n-1]\n"
     )
     result = _lint(document)
     assert _codes(result) == (
@@ -430,23 +449,71 @@ def test_rendered_value_with_embedded_newline_yields_lint_failure() -> None:
     assert result.admitted == ()
 
 
-def test_rendered_source_ref_with_embedded_newline_yields_lint_failure() -> None:
-    """Same net over the provenance segment: an embedded newline in a
-    source_ref breaks the bytes — caught as LINT_FAILURE, never
-    raised."""
-    fact = _canonical_fact(
-        value=_clinical_value(
-            provenance=Provenance(source_kind="monitor", source_ref="m-\n1"),
-        ),
-    )
-    document = _rendered((fact,))
-    assert document == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: 120/80 [present] [monitor m-\n"
-        b"1]\n"
-    )
+def test_injected_source_ref_with_embedded_newline_yields_lint_failure() -> None:
+    """Same byte-level net over the provenance seam: line-split
+    provenance fragments are enumerated as LINT_FAILURE (the renderer
+    itself now rejects such refs at render time, P0-1)."""
+    document = b"FC: unknown [not_assessed]\nTA: 120/80 [present] [monitor m-\n1]\n"
     result = _lint(document)
     assert DiagnosticCode.LINT_FAILURE in _codes(result)
+    assert result.admitted == ()
+
+
+# --- Hardened cross-line rules (P0-1): one line per field, provenance required --
+
+
+def test_duplicate_field_lines_yield_lint_failure() -> None:
+    """Hardened cross-line rule (P0-1): each field token may appear at
+    most once per document — a second FC line is a conformance
+    violation even when every line individually matches the grammar
+    (the renderer can never produce this: normalization yields at most
+    one canonical fact per field)."""
+    document = b"FC: 72 [present] [monitor m-1]\nFC: 80 [present] [monitor m-2]\n"
+    result = _lint(document)
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "more than once" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_repeated_field_lines_are_flagged_per_repeat_in_line_order() -> None:
+    """D1 enumeration of the cross-line rule: three FC lines flag the
+    second AND third repeats, deterministically in line order."""
+    document = (
+        b"FC: 72 [present] [monitor m-1]\n"
+        b"FC: 80 [present] [monitor m-2]\n"
+        b"FC: 90 [present] [monitor m-3]\n"
+    )
+    messages = _messages(_lint(document))
+    assert len(messages) == 2
+    assert "line 2" in messages[0] and "more than once" in messages[0]
+    assert "line 3" in messages[1] and "more than once" in messages[1]
+
+
+def test_present_line_without_provenance_yields_lint_failure() -> None:
+    """Hardened rule (P0-1): an assessed line REQUIRES the provenance
+    segment — a provenance-less PRESENT line (the injection residue the
+    diagnosis exhibited: a borrowed-second-line value splitting into
+    ``TA: 72 [present]``) can never pass the linter."""
+    result = _lint(b"TA: 72 [present]\n")
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "provenance" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        b"TA: missing [missing]\n",
+        b"TA: not_applicable [not_applicable]\n",
+        b"TA: unknown [unknown]\n",
+    ],
+)
+def test_assessed_lines_without_provenance_fail(line: bytes) -> None:
+    """Every non-``not_assessed`` token without a provenance segment is
+    a conformance violation (missingness-family pins of the rule)."""
+    result = _lint(line)
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "provenance" in result.diagnostics[0].message
     assert result.admitted == ()
 
 
@@ -473,10 +540,7 @@ def test_multiple_violations_are_all_enumerated_in_deterministic_order() -> None
     one LINT_FAILURE per violated rule — byte invariants first (final
     newline, CR), then per-line checks in line order (trailing
     whitespace, grammar)."""
-    document = (
-        b"TA: 120/80 [maybe] [monitor m-1] \r\n"
-        b"FC: 72 [present] [monitor m-2]"
-    )
+    document = b"TA: 120/80 [maybe] [monitor m-1] \r\nFC: 72 [present] [monitor m-2]"
     result = _lint(document)
     messages = _messages(result)
     assert _codes(result) == (

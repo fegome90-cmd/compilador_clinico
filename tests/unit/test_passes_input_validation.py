@@ -166,6 +166,21 @@ def test_non_string_fact_id_is_input_contract_error() -> None:
     assert _codes(result) == (DiagnosticCode.INPUT_CONTRACT_ERROR,)
 
 
+def test_empty_fact_id_is_input_contract_error() -> None:
+    """The defense-in-depth mirror rejects the empty identifier too."""
+    result = run_input_validation((_fact(fact_id=""),))
+    assert _codes(result) == (DiagnosticCode.INPUT_CONTRACT_ERROR,)
+    assert result.admitted == ()
+
+
+def test_empty_source_ref_is_input_contract_error() -> None:
+    """An empty provenance reference violates the value contract here too."""
+    provenance = Provenance(source_kind="monitor", source_ref="")
+    result = run_input_validation((_fact(provenance=provenance),))
+    assert _codes(result) == (DiagnosticCode.INPUT_CONTRACT_ERROR,)
+    assert result.admitted == ()
+
+
 def test_source_kind_outside_vocabulary_is_input_contract_error() -> None:
     """Provenance is part of the frozen value contract (design D8)."""
     provenance = Provenance(source_kind="whatsapp", source_ref="m-9")

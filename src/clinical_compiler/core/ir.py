@@ -1,8 +1,23 @@
-"""Intermediate representations for the compilation pipeline."""
+"""Intermediate representations for the compilation pipeline.
+
+CORE CHANGE RECORD (design.md's "only core change" — recorded
+exceptions): the first recorded exception is the adjudicated additive
+``CanonicalClinicalIR`` carrier (CRC-003 / design D10, owner
+adjudication 2026-08-28). The SECOND recorded exception, ADDITIVE and
+owner-pre-authorized by the repair instruction of 2026-08-30 (P0-2
+defect: a source-declared certainty was silently dropped at the
+pipeline boundary), is ``SourceFactIR.source_asserted_certainty`` —
+the minimal faithful implementation of the input-contract spec's
+traceability scenarios ("the resulting SourceFactIR carries the
+declared certainty verbatim as ``source_asserted_certainty``"). The
+field defaults to ``None`` so every pre-existing constructor site is
+unaffected; it never feeds ``ClinicalValue.certainty`` (CRC-001/002 —
+the compiler-assigned axis stays UNRESOLVED in R1).
+"""
 
 from dataclasses import dataclass
 
-from .types import ClinicalValue, Provenance
+from .types import Certainty, ClinicalValue, Provenance
 
 
 @dataclass(frozen=True)
@@ -14,12 +29,20 @@ class SourceFactIR:
         field_id: Clinical field the fact belongs to.
         raw_value: Untransformed value as found in the source.
         provenance: Attribution to the source of the fact.
+        source_asserted_certainty: The certainty the SOURCE itself
+            declared, preserved verbatim (CRC-002 authority
+            ``PRESERVED``) — ``None`` when the source declared none;
+            it is never invented, never a compiler assignment, and
+            never conflated with ``ClinicalValue.certainty``
+            (owner-pre-authorized additive core change, 2026-08-30 —
+            see the module docstring's CORE CHANGE RECORD).
     """
 
     fact_id: str
     field_id: str
     raw_value: object
     provenance: Provenance
+    source_asserted_certainty: Certainty | None = None
 
 
 @dataclass(frozen=True)

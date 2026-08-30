@@ -15,11 +15,12 @@ checked by exact runtime type, so a ``bool`` never passes a numeric field
 and an arbitrary Python object never becomes an admissible value.
 
 Certainty authority model (CRC-002 — ``BOTH_SEPARATED``): a declared
-``source_asserted_certainty`` is captured verbatim on
-``StructuredFeedFact`` (role ``clinical_source_assertion``, authority
-``PRESERVED``); it is optional and never invented, and it is never
-conflated with any compiler-assigned certainty — this module assigns
-none.
+``source_asserted_certainty`` is stored verbatim on the mapped
+``SourceFactIR`` in its dedicated slot (exposed through the
+``StructuredFeedFact`` wrapper by delegation; role
+``clinical_source_assertion``, authority ``PRESERVED``); it is
+optional and never invented, and it is never conflated with any
+compiler-assigned certainty — this module assigns none.
 """
 
 from collections.abc import Mapping
@@ -90,16 +91,27 @@ class StructuredFeedFact:
     """An accepted record mapped onto the IR ladder entry.
 
     Attributes:
-        fact: The mapped ``SourceFactIR`` (verbatim ``raw_value`` and
-            provenance).
-        source_asserted_certainty: The certainty the source itself
-            declared, captured verbatim (CRC-002: authority ``PRESERVED``)
-            — ``None`` when the source declared none; never invented and
-            never a compiler assignment.
+        fact: The mapped ``SourceFactIR`` (verbatim ``raw_value``,
+            provenance, and declared certainty).
+
+    The declared certainty lives ON the fact (P0-2: it must survive
+    the wrapper across the composition boundary); this wrapper exposes
+    it as a read-only delegated property, so the two stay coherent by
+    construction — there is exactly one storage location, the fact's
+    dedicated ``source_asserted_certainty`` slot.
     """
 
     fact: SourceFactIR
-    source_asserted_certainty: Certainty | None
+
+    @property
+    def source_asserted_certainty(self) -> Certainty | None:
+        """The source's declared certainty — delegated to the fact.
+
+        Read-only by construction: the wrapper's single stored field is
+        frozen and the declaration has exactly one storage location
+        (the fact's dedicated slot), so the two can never diverge.
+        """
+        return self.fact.source_asserted_certainty
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +139,11 @@ def map_record(record: object) -> ContractEvaluation:
     Pure and deterministic: identical records evaluate identically,
     independent of key insertion order; the first contract violation is
     reported in a fixed check order with a deterministic message.
+    Identifiers are structural shapes: ``fact_id`` and ``source_ref``
+    must be NON-empty strings — an empty value is the IR lineage fault
+    itself (``CanonicalClinicalIR`` rejects empty ``source_fact_ref``),
+    so it is rejected here at the boundary as a mapped diagnostic rather
+    than surfacing downstream as an unhandled exception (P1-1 repair).
     Structural violations yield ``INPUT_CONTRACT_ERROR``; an otherwise
     conformant record whose ``raw_value`` type is invalid for its field
     yields ``TYPE_ERROR`` (fault corpus FC-01..FC-05).
@@ -153,10 +170,10 @@ def map_record(record: object) -> ContractEvaluation:
         )
 
     fact_id = rec["fact_id"]
-    if not isinstance(fact_id, str):
+    if not isinstance(fact_id, str) or not fact_id:
         return _reject(
             DiagnosticCode.INPUT_CONTRACT_ERROR,
-            "fact_id must be a string",
+            "fact_id must be a non-empty string",
         )
     field_id = rec["field_id"]
     if not isinstance(field_id, str):
@@ -195,10 +212,10 @@ def map_record(record: object) -> ContractEvaluation:
             f"source_kind {source_kind!r} outside the frozen vocabulary",
         )
     source_ref = prov["source_ref"]
-    if not isinstance(source_ref, str):
+    if not isinstance(source_ref, str) or not source_ref:
         return _reject(
             DiagnosticCode.INPUT_CONTRACT_ERROR,
-            "source_ref must be a string",
+            "source_ref must be a non-empty string",
         )
 
     source_asserted_certainty: Certainty | None = None
@@ -230,11 +247,9 @@ def map_record(record: object) -> ContractEvaluation:
         field_id=field_id,
         raw_value=raw_value,
         provenance=Provenance(source_kind=source_kind, source_ref=source_ref),
+        source_asserted_certainty=source_asserted_certainty,
     )
     return ContractEvaluation(
-        fact=StructuredFeedFact(
-            fact=fact,
-            source_asserted_certainty=source_asserted_certainty,
-        ),
+        fact=StructuredFeedFact(fact=fact),
         diagnostic=None,
     )

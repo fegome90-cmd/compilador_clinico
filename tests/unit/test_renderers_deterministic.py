@@ -17,6 +17,8 @@ dangling-ref safety net's reference point.
 import hashlib
 from typing import cast
 
+import pytest
+
 from clinical_compiler.core.diagnostics import DiagnosticCode
 from clinical_compiler.core.ir import (
     CanonicalClinicalFact,
@@ -132,8 +134,7 @@ def test_renders_canonical_telegraphic_document_bytes() -> None:
     """
     result = _render((_canonical_fact(), _fc_fact()))
     assert result.admitted[0] == (
-        b"FC: 72 [present] [monitor m-9]\n"
-        b"TA: 120/80 [present] [clinical_note n-1]\n"
+        b"FC: 72 [present] [monitor m-9]\nTA: 120/80 [present] [clinical_note n-1]\n"
     )
 
 
@@ -143,8 +144,7 @@ def test_pc1_unassessed_field_renders_explicit_unknown() -> None:
     assessed absence."""
     result = _render((_canonical_fact(),))
     assert result.admitted[0] == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: 120/80 [present] [clinical_note n-1]\n"
+        b"FC: unknown [not_assessed]\nTA: 120/80 [present] [clinical_note n-1]\n"
     )
 
 
@@ -152,14 +152,11 @@ def test_fact_carrying_not_assessed_renders_unknown_unassessed() -> None:
     """clinical-fact-model scenario: a fact with missingness
     ``not_assessed`` renders explicitly as unknown/unassessed."""
     fact = _canonical_fact(
-        value=_clinical_value(
-            value=None, missingness=Missingness.NOT_ASSESSED
-        ),
+        value=_clinical_value(value=None, missingness=Missingness.NOT_ASSESSED),
     )
     result = _render((fact,))
     assert result.admitted[0] == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: unknown [not_assessed] [clinical_note n-1]\n"
+        b"FC: unknown [not_assessed]\nTA: unknown [not_assessed] [clinical_note n-1]\n"
     )
 
 
@@ -176,17 +173,14 @@ def test_missing_fact_renders_assessed_absence_with_provenance() -> None:
     )
     result = _render((fact,))
     assert result.admitted[0] == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: missing [missing] [lab l-3]\n"
+        b"FC: unknown [not_assessed]\nTA: missing [missing] [lab l-3]\n"
     )
 
 
 def test_not_applicable_fact_renders_distinct_glyph() -> None:
     """``not_applicable`` keeps its own assessed-absence glyph."""
     fact = _canonical_fact(
-        value=_clinical_value(
-            value=None, missingness=Missingness.NOT_APPLICABLE
-        ),
+        value=_clinical_value(value=None, missingness=Missingness.NOT_APPLICABLE),
     )
     result = _render((fact,))
     assert result.admitted[0] == (
@@ -202,8 +196,7 @@ def test_unknown_missingness_renders_explicit_unknown() -> None:
     )
     result = _render((fact,))
     assert result.admitted[0] == (
-        b"FC: unknown [not_assessed]\n"
-        b"TA: unknown [unknown] [clinical_note n-1]\n"
+        b"FC: unknown [not_assessed]\nTA: unknown [unknown] [clinical_note n-1]\n"
     )
 
 
@@ -265,9 +258,7 @@ def test_output_is_utf8_lf_only_without_trailing_whitespace() -> None:
     assert not document.endswith(b"\n\n")
     text = document.decode("utf-8")
     for line in text.split("\n"):
-        assert line == "" or (
-            not line.endswith(" ") and not line.endswith("\t")
-        )
+        assert line == "" or (not line.endswith(" ") and not line.endswith("\t"))
 
 
 # --- Determinism (sort key, hash-order independence) ---------------------------
@@ -314,7 +305,7 @@ def test_fc10_dangling_ref_yields_render_error_and_no_partial_document() -> None
     ``RENDER_ERROR``; the renderer never crashes and never emits a
     partial document (defense-in-depth, CRC-004 renderer side)."""
     ghost = DocumentEntry(clinical_fact_ref="c-ghost", presentation_role=ROLE)
-    entries = (_entries((_fc_fact(), _canonical_fact())) + (ghost,))
+    entries = _entries((_fc_fact(), _canonical_fact())) + (ghost,)
     result = _render((_fc_fact(), _canonical_fact()), entries=entries)
     assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
     assert result.admitted == ()
@@ -357,12 +348,50 @@ def test_unrenderable_value_type_yields_render_error() -> None:
     assert result.admitted == ()
 
 
+@pytest.mark.parametrize("line_break", ["\n", "\r"])
+def test_value_with_line_break_is_unrenderable_render_error(
+    line_break: str,
+) -> None:
+    """P0-1 injection closure: a contract-VALID verbatim string value
+    carrying a line break has no canonical single-line rendering — the
+    renderer fails closed (RENDER_ERROR, never bytes) instead of
+    emitting a line that could borrow the document's line grammar and
+    provenance. Verbatim values are never rewritten or escaped
+    (input-contract spec: the rendered value is the raw value)."""
+    fact = _canonical_fact(
+        value=_clinical_value(value=f"72 [present]{line_break}FC: 200"),
+    )
+    result = _render((fact,))
+    assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
+    assert result.admitted == ()
+    assert "line break" in result.diagnostics[0].message
+
+
+@pytest.mark.parametrize("line_break", ["\n", "\r"])
+def test_source_ref_with_line_break_is_unrenderable_render_error(
+    line_break: str,
+) -> None:
+    """P0-1: the same closure over the provenance segment — a
+    ``source_ref`` carrying a line break cannot render canonically
+    (the provenance segment is single-line), so the fact fails closed
+    with RENDER_ERROR instead of emitting split provenance bytes."""
+    fact = _canonical_fact(
+        value=_clinical_value(
+            provenance=Provenance(source_kind="monitor", source_ref=f"m-{line_break}1")
+        ),
+    )
+    result = _render((fact,))
+    assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
+    assert result.admitted == ()
+    assert "source_ref" in result.diagnostics[0].message
+
+
 def test_multiple_inconsistencies_are_all_enumerated() -> None:
     """D1 full enumeration: a dangling ref AND an omitted fact both
     surface — one ``RENDER_ERROR`` each, no partial document."""
     facts = (_fc_fact(), _canonical_fact())
     ghost = DocumentEntry(clinical_fact_ref="c-ghost", presentation_role=ROLE)
-    entries = (_entries((_fc_fact(),)) + (ghost,))
+    entries = _entries((_fc_fact(),)) + (ghost,)
     result = _render(facts, entries=entries)
     assert _codes(result) == (
         DiagnosticCode.RENDER_ERROR,
