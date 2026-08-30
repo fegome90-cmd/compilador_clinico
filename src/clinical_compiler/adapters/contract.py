@@ -195,7 +195,7 @@ def map_record(record: object) -> ContractEvaluation:
             "provenance is not an object",
         )
     prov = cast(Mapping[str, object], provenance)
-    if set(prov.keys()) != REQUIRED_PROVENANCE_KEYS:
+    if frozenset(prov.keys()) != REQUIRED_PROVENANCE_KEYS:
         return _reject(
             DiagnosticCode.INPUT_CONTRACT_ERROR,
             "provenance must declare exactly 'source_kind' and 'source_ref'",
