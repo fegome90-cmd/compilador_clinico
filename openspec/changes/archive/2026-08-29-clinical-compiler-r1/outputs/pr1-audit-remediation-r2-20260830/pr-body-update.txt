@@ -1,0 +1,53 @@
+# PR body update — PR #1 (fegome90-cmd/compilador_clinico)
+
+Per audit disposition (§7): body updated ONLY in the Verification section; everything else preserved byte-for-byte (What ships / Governance trail / Known non-blocking notes).
+
+Prepared body (committed in C2, applied AFTER the final push per disposition order):
+
+```markdown
+# R1: Clinical Record Compiler — contract-governed implementation (Phases 0–4)
+
+First full increment of `clinical-compiler-r1` under the **AI Work Agent Execution Contract v0.3**: from a committed core + empty scaffold to a working, verified, deterministic clinical record compiler with CLI.
+
+## What ships
+
+- **Input contract** (`adapters/contract.py`): frozen JSONL structured-feed contract — per-field exact-type predicates (bool≠int trap closed), closed vocabularies, `source_asserted_certainty` preserved verbatim on the wrapper (`StructuredFeedFact`), `raw_value: null` = PC-2 assessed-absence marker.
+- **Pipeline stages** (pure, quarantine per-fact, D1 fail-closed): `input_validation` → `semantic_normalization` (certainty **always `UNRESOLVED`** in R1 — never invented from `source_kind`; `PROBABLE/LIKELY/UNLIKELY = NOT_PRODUCED`) → `admissibility` (veto certainty-independent, FC-08 provenance resolution).
+- **Canonical aggregate** (`core/ir.py`, the only adjudicated core change): `CanonicalClinicalIR` with construction-time invariants (unique ids, lineage boundary, deterministic ordering).
+- **Policy resolution** (`adapters/seed.py`): `UNRESOLVED_POLICY` state machine — an uncited approved-empty policy is **unrepresentable**; empty set only via the recorded `DEFERRED_BY_OWNER` decision.
+- **Document path**: `document_selection` (refs-only DocumentIR) → deterministic renderer (bijection safety net → `RENDER_ERROR`, never a partial document) → conformance linter (independent tables — a renderer bug cannot validate itself).
+- **Composition root + CLI**: `pipeline.py` (exit code = pure function of the diagnostic set) and `clinical-compiler compile INPUT [--mode] [--policy-seed] [--output]` with the frozen exit table (0/2/3–10/70), stderr diagnostics, atomic output write (temp+fsync+replace+dir-fsync).
+- **Docs**: README verified against the landed implementation + `docs/architecture.md` record.
+
+## Verification
+
+- **Current verification state: BLOCKED** — pending independent re-audit (reviewer ≠ executor); no PASS / MERGE_READY / archive-ready state is operative
+- **Target:** `b8c0c46b99290863faa6c4c42c10d947c40c6e51` (C1 — "fix(linter,renderer): canonical-char parity in linter and FC-11 presentation-role validation")
+- **Executor battery** (run at C1 in a separate clean detached checkout; post-commit fence: HEAD == C1, porcelain EMPTY): 622 passed / 0 failed · 100.00% branch coverage (707 stmts / 252 branches / 0 missed; gate ≥95) · `mypy --strict` clean (22 files) · `ruff check` clean · zero runtime dependencies · golden corpus `overall_integrity=VALID` under plain AND `python -I` · determinism byte-identical across `PYTHONHASHSEED` 0/12345 · exit-70 sweep 20/20 mapped (13 CLI + 7 stage-level adversarial incl. the new lint paths), ZERO 70
+- **Independent audit:** both round-2 BLOCKERs remediated with repro-before → RED → GREEN evidence — (1) linter canonical-character parity (own duplicated frozen 67-codepoint set; every set member now LINT_FAILURE, was 65/67 lint-clean), (2) FC-11 `presentation_role` validated at the renderer boundary → `LINT_FAILURE`, exit 10, fail-closed; audit dispositions applied — **re-audit pending**
+- Prior "sdd-verify verdict: PASS_WITH_WARNINGS — archive-ready / 406/406 tests" (and the interim 464-test state of the first remediation round): **superseded**
+
+## Governance trail
+
+- 5 hash-bound approval records (PHASE_0–4); bundle manifest `7a7d3a28afa749c362a2091f4ea0c60d25745f0ede49ac311b5e8d8511e0737d` verified drift-free at archive
+- 22 owner decisions ledgered; 26 minimal-faithful readings flagged for review
+- Full audit trail: `openspec/changes/archive/2026-08-29-clinical-compiler-r1/` (proposal → specs → design → tasks → approvals → phase reports → final receipt M10.3 → verify-report → archive-report)
+- Main specs populated: `openspec/specs/` (7 domains)
+
+## Known non-blocking notes
+
+1. `tasks.md` checkboxes 0/44 — deliberate (hash-bound bundle; completion tracked in state + close reports)
+2. Bundle-manifest concat recipe to be recorded exactly (per-file hashes all match — no drift)
+3. r2_debt (for the next change): free-text input, core type narrowing (CRC-006), extra CLI verbs (stdin/`--json`/`check`), write-fault exit mapping, codify glyph rule A into spec text
+
+```
+
+## Apply command
+
+    gh pr edit 1 --repo fegome90-cmd/compilador_clinico --body-file /tmp/pr1-body-new.md
+
+Target SHA referenced in the body: C1 = b8c0c46b99290863faa6c4c42c10d947c40c6e51 (the code SHA audited; C2 — this evidence commit — carries no code changes, so C1 remains the tested target).
+
+Post-execution verification: the `gh pr view 1 --json body` capture is delivered in the executor's round-2 report to the owner (it cannot live inside C2 without a post-push force-push or a second evidence commit; neither was authorized).
+
+Written at 2026-08-30T12:06:16Z.

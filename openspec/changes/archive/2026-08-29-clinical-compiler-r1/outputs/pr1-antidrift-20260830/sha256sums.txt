@@ -1,0 +1,19 @@
+# SHA-256 of every file in this evidence directory except sha256sums.txt itself.
+# target: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd — generated 2026-08-30T10:27:06Z (regenerated after drift-note.md; see drift-note.md)
+b6bfb81e49201508ac7bcc329d5089bfcee0971c0cbbb05752c4f8034e463c5b  ./baseline-head.txt
+e0145a89e002de62141f27f4abb6c450fd8de8a316d9a906db5a9844d10ec1bc  ./battery/01-pytest-coverage.log
+4c53ba95c8c81730d905b2823c977a74bf65d87580bea9002310a9557a3c4849  ./battery/02-mypy-strict.log
+9bcc9c4baa5efec320f4aca018bccffbd8de989adac55ac0551a7ebc116e9d81  ./battery/03-ruff-check.log
+f78760987420bc700140434b970df7dc1a46766fb9d0b9554e0a66afe2bc3792  ./battery/04-golden-machinery-verify.log
+3bcfa389d2733c62a597656fef6f9a63ff37be8c6ca4be3af09aca76a7894717  ./battery/05-determinism-hashseed.log
+859cae64e6b5137e0da93a69c5daff79f46b1c9530389675e52bd8044db63ee4  ./battery/06-git-diff-check.log
+6cf67000f1129fbd981c1b25f3b4f5cb46d2ce52068187ae131a799e0715372e  ./battery/07-imports-review.log
+b7b4b437b5f3bf4a8d640acca446a02c9bc8767bc16adef19b08e62902e31e48  ./battery/08-zero-runtime-deps.log
+552ef8ef30abddb3961b99a895c31c28612810fc683fb651ab034087e2c70964  ./battery/09-determinism-scan.log
+bd7eddcbcb33da03500354ae2d709b1c7ae5ba9237e57133258f6fd243696122  ./battery/10-admissibility-explicit-policy.log
+6caaf6a4f1cbc4b8cd44f080ebf818743f47c36171843cd32b6c7641874d89c1  ./battery/11-doc-diagnostics-noncoexistence.log
+197a620be7e7004ffca77fdccb399a563e06189d3d83c5e7734bae2cb3d4a202  ./battery/12-exit70-sweep.log
+90dd17cc7de9f6892610e92a3ecaec1360ef6cd16e4326c0e63c6df92644b960  ./cli-sweep.md
+003bff5eeedd9909f4e47769f9e1d940aacf0d3207ae9361ff47c23eb9612aa7  ./drift-note.md
+c85878254ff9da80aba97bd9c54bbf2c963007d2165d0ba22ad63f822a9ec76a  ./preflight.txt
+4aa5faf8b9a7324e84149d558814df419975b0453c332b1a7ac8f1ea45353013  ./README.md

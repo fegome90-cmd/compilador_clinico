@@ -1,0 +1,28 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:48Z
+description: Admissibility explicit-veto_terms policy re-verified live (stage never reads core constant)
+command: /tmp/pr1-audit-remed-scratch/explicit_policy.sh 
+--- exit_code: 0
+--- stdout ---
+### [code] admissibility signature — veto_terms is an explicit REQUIRED parameter
+102:def run_admissibility(
+103-    facts: tuple[CanonicalClinicalFact, ...],
+104-    veto_terms: frozenset[str],
+105-    source_fact_ids: frozenset[str],
+106-) -> StageResult[CanonicalClinicalFact]:
+
+### [code] no core.policy import anywhere outside core/
+(none outside core — OK)
+
+### [code] admissibility.py imports (no policy module)
+64:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+65:from clinical_compiler.core.ir import CanonicalClinicalFact
+66:from clinical_compiler.pipeline_types import StageResult
+
+### [live re-verification]
+live: test_stage_never_reads_the_core_policy_constant PASSED against current tree
+live: core.policy.NEVER_AUTO_TERMS restored to frozenset() (untouched default)
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:49Z

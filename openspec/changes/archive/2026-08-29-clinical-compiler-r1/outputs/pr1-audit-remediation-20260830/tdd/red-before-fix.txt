@@ -1,0 +1,35 @@
+# TDD RED run (per module) — new audit-remediation tests against PRE-FIX code
+# utc=2026-08-30T10:57:37Z
+
+## [1] linter module — expect: new empty-source_ref tests FAIL (defect passes them today)
+linter_exit=1
+            b"FC: 72 [present] [monitor ]\n"
+            b"TA: 120/80 [present] [clinical_note ]\n"
+        )
+        first = _lint(document)
+        second = _lint(document)
+        assert first.diagnostics == second.diagnostics
+        messages = _messages(first)
+>       assert len(messages) == 2
+E       assert 0 == 2
+E        +  where 0 = len([])
+
+tests/unit/test_linter_conformance.py:562: AssertionError
+=========================== short test summary info ============================
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_yields_lint_failure[TA: 72 [present] [monitor ]\n]
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_yields_lint_failure[TA: missing [missing] [lab ]\n]
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_yields_lint_failure[TA: not_applicable [not_applicable] [monitor ]\n]
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_yields_lint_failure[FC: 72 [present] [monitor   ]\n]
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_yields_lint_failure[TA: 120/80 [present] [clinical_note \t]\n]
+FAILED tests/unit/test_linter_conformance.py::test_empty_source_ref_violations_enumerate_in_line_order_deterministically
+6 failed, 39 passed in 0.04s
+
+## [2] renderer module — expect: ImportError on CANONICAL_BREAKING_CHARACTERS (constant absent pre-fix)
+renderer_exit=2
+    from clinical_compiler.renderers.deterministic import (
+E   ImportError: cannot import name 'CANONICAL_BREAKING_CHARACTERS' from 'clinical_compiler.renderers.deterministic' (/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3/src/clinical_compiler/renderers/deterministic.py)
+=========================== short test summary info ============================
+ERROR tests/unit/test_renderers_deterministic.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.05s
+# utc_end=2026-08-30T10:57:37Z

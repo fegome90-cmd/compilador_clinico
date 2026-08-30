@@ -1,0 +1,48 @@
+{
+  "author": "independent-spec-derived (subagent re-derivation under closed rule A, 2026-08-29)",
+  "evidence_integrity": "VALID",
+  "notes": "Re-derivation by an independent author EXCLUSIVELY from the frozen bundle (design.md Determinism Mechanism + Deterministic Interpretation Table + frozen fault corpus rows PC-1/PC-2; specs: determinism-rendering, pipeline-passes, clinical-fact-model) and the scenario inputs. No file under src/ was read; no implementation-generated golden document was read; no rendering code was executed. Input digests recomputed via shasum and equal to the committed scenario inputs. This re-derivation supersedes the 2026-08-29 first independent sample, which diverged from the implementation on exactly one glyph family (provenance), exposing spec silence A1. A1 CLOSED BY OWNER ADJUDICATION 2026-08-29 (option A, bracket form): provenance renders as [<source_kind> <source_ref>] with a single space separator inside square brackets (e.g. [monitor m-9], [clinical_note n-1]). With A1 closed, the full glyph rule set is closed and every former ambiguity is a recorded decision, none silently guessed: (A1, CLOSED) provenance bracket form above; (A2) uniform bracket grammar - present facts carry [present]; (A3) certainty renders NO glyph (R1: UNRESOLVED everywhere per CRC-001; source_kind informs PROVENANCE only per CRC-002 - no certainty token on the document surface); (A4) assessed absence token is 'missing' (line 'missing [missing]', with provenance - clinical-fact-model: assessed absence requires a source assertion); unassessed is 'unknown [not_assessed]' with NO provenance (frozen design.md PC-1 line 'FC: unknown [not_assessed]'); (A5) no header/mode banner - bare telegraphic lines only; (A6) numbers via shortest deterministic repr (str(int) for 72, '80.5' minimal information-preserving form, TA string '120/80' verbatim); (A7) the document renders every contract field exercised by the scenario family (FC, TA), ordered by codepoint sort on (field_id, clinical_fact_id); line grammar '{field}: {value} [{missingness}] [{provenance}]'; UTF-8, LF-only, no trailing whitespace, exactly one final newline. Path convention: input/document paths relative to tests/golden/, mirroring the parent manifest family shape.",
+  "schema": "clinical-compiler-r1/independent-sample/1",
+  "scenarios": [
+    {
+      "document": "independent/pc1_unassessed_fc.expected.txt",
+      "evidence_integrity": "VALID",
+      "input": "scenarios/pc1_unassessed_fc.input.jsonl",
+      "input_sha256": "d3e4206b6b15bdd9ab32131dca26542104e29ed6941e04a25df1bd07e1864b05",
+      "name": "pc1_unassessed_fc",
+      "notes": "Exercises PC-1 (unassessed field renders explicit unknown). Derivation: input has only a TA fact (120/80, monitor m-9); FC has NO fact -> Deterministic Interpretation Table row 'No fact exists for the field' -> NOT_ASSESSED at document level -> frozen design.md line 'FC: unknown [not_assessed]', no provenance (nothing to trace - closed rule A4). TA fact-backed PRESENT -> closed rules A1+A2+A6 -> 'TA: 120/80 [present] [monitor m-9]' (provenance on every fact-backed line). Sort: codepoint (field_id, clinical_fact_id): FC < TA. No certainty glyph (A3). Bytes: ASCII/UTF-8, LF-only, no trailing whitespace, single final newline (od-verified).",
+      "provenance": "spec-derived: design.md fault-corpus PC-1 (frozen line), Deterministic Interpretation Table rows 1+5, Determinism Mechanism 1-3; clinical-fact-model missingness non-conflation; closed rules A1-A7 (A1 by owner adjudication 2026-08-29, option A)",
+      "sha256": "31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99"
+    },
+    {
+      "document": "independent/pc2_assessed_absence_ta.expected.txt",
+      "evidence_integrity": "VALID",
+      "input": "scenarios/pc2_assessed_absence_ta.input.jsonl",
+      "input_sha256": "4af7f05b14487d1e9184c1d7e5fb9f54cfe4abe0ad82b91d42ed162a3c61071d",
+      "name": "pc2_assessed_absence_ta",
+      "notes": "Exercises PC-2 (assessed absence traces to a source assertion). Derivation: TA raw_value null = contract marker for asserted absence -> Deterministic Interpretation Table row 'Source explicitly asserts absence' -> missingness MISSING, provenance mandatory per clinical-fact-model -> closed rules A1+A4 -> 'TA: missing [missing] [clinical_note n-1]' (token 'missing', NOT 'unknown': 'unknown' would re-conflate unassessed with assessed absence, forbidden by missingness non-conflation). FC=72 (monitor m-9) PRESENT -> 'FC: 72 [present] [monitor m-9]' via str(int) per Determinism Mechanism 3 (closed rule A6). Sort FC < TA. No certainty glyph (A3). Bytes od-verified.",
+      "provenance": "spec-derived: design.md fault-corpus PC-2, Deterministic Interpretation Table rows 1+3, Determinism Mechanism 1-3; clinical-fact-model missingness non-conflation + provenance traceability; closed rules A1-A7 (A1 by owner adjudication 2026-08-29, option A)",
+      "sha256": "6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909"
+    },
+    {
+      "document": "independent/standard_mixed.expected.txt",
+      "evidence_integrity": "VALID",
+      "input": "scenarios/standard_mixed.input.jsonl",
+      "input_sha256": "f66cbe51ebdb435bb4ca5a3ba9e63e1c8595593b65f591781052470d67eb1b9c",
+      "name": "standard_mixed",
+      "notes": "Both fields fact-backed and PRESENT. Derivation: FC=80.5 (monitor m-3) -> shortest deterministic repr '80.5' (closed rule A6; str(int) inapplicable to non-integer, minimal information-preserving form - a fixed width would give '80.50'). TA='120/80' (monitor m-9) -> string rendered verbatim. Both lines carry [present] (A2) and the A1 bracket provenance. Certainty UNRESOLVED on both facts per CRC-001 fail-closed rule -> no certainty glyph (A3); monitor source_kind informs PROVENANCE only (CRC-002) - it must NOT yield CONFIRMED or any certainty display. Sort FC < TA. Bytes od-verified.",
+      "provenance": "spec-derived: design.md Deterministic Interpretation Table rows 1-2, Determinism Mechanism 1-3, CRC-001/CRC-002 certainty adjudications; clinical-fact-model provenance traceability; closed rules A1-A7 (A1 by owner adjudication 2026-08-29, option A)",
+      "sha256": "e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc"
+    }
+  ],
+  "sources": [
+    "openspec/changes/clinical-compiler-r1/design.md",
+    "openspec/changes/clinical-compiler-r1/specs/determinism-rendering/spec.md",
+    "openspec/changes/clinical-compiler-r1/specs/pipeline-passes/spec.md",
+    "openspec/changes/clinical-compiler-r1/specs/clinical-fact-model/spec.md",
+    "tests/golden/manifest.json (independent_sample slot shape only)",
+    "tests/golden/scenarios/pc1_unassessed_fc.input.jsonl",
+    "tests/golden/scenarios/pc2_assessed_absence_ta.input.jsonl",
+    "tests/golden/scenarios/standard_mixed.input.jsonl"
+  ]
+}

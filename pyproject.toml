@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Clinical document compiler"
 requires-python = ">=3.11"
 
+[project.scripts]
+clinical-compiler = "clinical_compiler.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
@@ -25,7 +28,12 @@ clinical_compiler = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--cov=clinical_compiler --cov-report=term-missing"
+addopts = "--cov=clinical_compiler --cov-report=term-missing --strict-markers"
+markers = [
+    "unit: fast isolated unit tests",
+    "integration: tests exercising multiple components together",
+    "slow: tests that take significant time",
+]
 
 [tool.coverage.run]
 branch = true

@@ -1,0 +1,33 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:18:12Z
+description: Golden machinery verify: corpus integrity, evidence classification, digests vs committed files — plain AND python -I AND PYTHONHASHSEED=0 fresh interpreters (project interpreter; bare python3 is Xcode 3.9, below floor)
+command: /tmp/pr1-antidrift-scratch/golden_verify_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+# NOTE: bare 'python3' on PATH is Xcode CLT Python 3.9 (< project floor >=3.11, no StrEnum);
+# isolated/seeded runs therefore use the project interpreter via 'uv run --no-sync python'.
+
+### [A] golden_machinery verify — PLAIN interpreter (uv run)
+corpus_verified=True
+independent_sample_present=True
+overall_integrity=VALID
+phase3_gate_blocked=False
+reason=corpus verified and an independently authored expected sample is present — golden evidence is VALID
+verify_plain_exit=0
+
+### [B] golden_machinery verify — python -I (fresh isolated interpreter, -E implied)
+corpus_verified=True
+independent_sample_present=True
+overall_integrity=VALID
+phase3_gate_blocked=False
+reason=corpus verified and an independently authored expected sample is present — golden evidence is VALID
+verify_isolated_exit=0
+
+### [C] digest cross-check: digest <input> under 3 invocation modes vs committed manifest digests
+pc1_unassessed_fc: plain=31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99 seeded0=31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99 isolated=31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99 committed_doc_sha=31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99 manifest_sha=31d58796158fc876dc49434008586788938b0d9b5b46a9368ab37aac7ccddb99 -> MATCH
+pc2_assessed_absence_ta: plain=6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909 seeded0=6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909 isolated=6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909 committed_doc_sha=6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909 manifest_sha=6387f1afe79e6c20ec6f828e323ff45ea9c46207cea7f0e7327b4ca604dad909 -> MATCH
+standard_mixed: plain=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc seeded0=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc isolated=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc committed_doc_sha=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc manifest_sha=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc -> MATCH
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 0 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: 

@@ -1,0 +1,42 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:49Z
+description: Extended exit-70 sweep: 29 CLI cases (27 prior + ws-only-source_ref -> exit 10 + U+2028 value -> exit 9); ZERO 70, stdout empty on every fault
+command: /tmp/pr1-audit-remed-scratch/exit70_sweep.sh 
+--- exit_code: 0
+--- stdout ---
+### extended invalid-input family sweep (CLI, fresh interpreter per case) — ZERO 70 required
+### (27 prior cases + 2 new audit-remediation cases: ws-only source_ref -> LINT_FAILURE exit 10; U+2028 value -> RENDER_ERROR exit 9)
+empty fact_id                        expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: fact_id must be a non-empty string
+empty source_ref                     expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: source_ref must be a non-empty string
+ws-only source_ref (NEW)             expected=10  actual=10  OK   stdout-empty     | stderr1=LINT_FAILURE: line 2: provenance source_ref is empty or whitespace-only — an assessed line
+bad certainty name                   expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: source_asserted_certainty 'definitely' outside the taxonomy
+field outside contract               expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: field_id 'ZZ' outside the frozen contract
+source_kind outside vocab            expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: source_kind 'psychic' outside the frozen vocabulary
+missing required keys                expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: missing required key 'provenance'
+unknown key                          expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: unknown key 'extra'
+bool raw_value (numeric F)           expected=4   actual=4   OK   stdout-empty     | stderr1=TYPE_ERROR: raw_value of type 'bool' is not admissible for field 'FC'
+str raw_value on FC                  expected=4   actual=4   OK   stdout-empty     | stderr1=TYPE_ERROR: raw_value of type 'str' is not admissible for field 'FC'
+injection: value LF                  expected=9   actual=9   OK   stdout-empty     | stderr1=RENDER_ERROR: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f519572
+injection: source_ref LF             expected=9   actual=9   OK   stdout-empty     | stderr1=RENDER_ERROR: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f519572
+U+2028 value (NEW)                   expected=9   actual=9   OK   stdout-empty     | stderr1=RENDER_ERROR: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f519572
+seed terms=[]                        expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_empty_terms.json' 
+seed empty-string term               expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_empty_term.json' t
+seed non-string term                 expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_nonstring.json' te
+seed wrong shape                     expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_wrongshape.json' m
+seed malformed JSON                  expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_badjson.json' is n
+seed terms not a list                expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/seed_terms_notlist.json
+seed file missing                    expected=2   actual=2   OK   stdout-empty     | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-audit-remed-scratch/sweep/definitely-missing.json
+input file missing                   expected=2   actual=2   OK   stdout-empty     | stderr1=clinical-compiler: error: cannot read input '/tmp/pr1-audit-remed-scratch/sweep/definitely
+no arguments                         expected=2   actual=2   OK   stdout-empty     | stderr1=clinical-compiler: error: the following arguments are required: command
+unknown subcommand                   expected=2   actual=2   OK   stdout-empty     | stderr1=clinical-compiler: error: argument command: invalid choice: 'frobnicate' (choose from comp
+unknown --mode                       expected=2   actual=2   OK   stdout-empty     | stderr1=clinical-compiler: error: argument --mode: invalid choice: 'OPERA' (choose from NURSING_RE
+bad UTF-8 feed                       expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: bytes are not valid UTF-8
+invalid JSONL line                   expected=3   actual=3   OK   stdout-empty     | stderr1=INPUT_CONTRACT_ERROR: line 1 is not valid JSON
+veto hit (populated seed)            expected=6   actual=6   OK   stdout-empty     | stderr1=POLICY_VIOLATION: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f51
+valid run                            expected=0   actual=0   OK   stdout-empty     | stderr1=
+valid run, absent flag               expected=0   actual=0   OK   stdout-empty     | stderr1=
+### sweep_overall_exit=0 (0 = every case mapped to expectation, stdout empty on faults, zero 70)
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:51Z

@@ -1,0 +1,34 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:20:51Z
+description: Admissibility explicit-policy: veto terms ONLY as explicit parameter, never reads core.policy — code + test citations + live re-verification
+command: /tmp/pr1-antidrift-scratch/explicit_policy_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+### [code] admissibility signature — veto_terms is an explicit REQUIRED parameter
+102:def run_admissibility(
+103-    facts: tuple[CanonicalClinicalFact, ...],
+104-    veto_terms: frozenset[str],
+105-    source_fact_ids: frozenset[str],
+106-) -> StageResult[CanonicalClinicalFact]:
+
+### [code] no core.policy import anywhere outside core/
+(none outside core — OK)
+
+### [code] admissibility.py imports (no policy module)
+64:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+65:from clinical_compiler.core.ir import CanonicalClinicalFact
+66:from clinical_compiler.pipeline_types import StageResult
+
+### [test citations]
+- tests/unit/test_passes_admissibility.py:247 test_stage_never_reads_the_core_policy_constant — monkeypatches core.policy.NEVER_AUTO_TERMS to a non-empty set; stage output unchanged (no code path to the constant)
+- tests/unit/test_passes_admissibility.py:223 test_empty_veto_set_is_a_pure_no_op — frozenset() veto is a pure no-op (approved-empty FC-12 path)
+- src/clinical_compiler/adapters/seed.py:21 docstring: 'core.policy is never imported or mutated'
+- src/clinical_compiler/passes/admissibility.py:12 docstring: 'veto_terms arrives EXPLICITLY as a parameter — the ONLY veto source this stage consults'
+
+### [live re-verification]
+live: test_stage_never_reads_the_core_policy_constant PASSED against current tree
+live: core.policy.NEVER_AUTO_TERMS restored to frozenset() (untouched default)
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 1 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: ?? .ve-light-full.jpeg;

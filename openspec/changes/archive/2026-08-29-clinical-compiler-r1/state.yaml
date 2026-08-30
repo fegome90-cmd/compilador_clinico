@@ -1,0 +1,107 @@
+# DAG state for change: clinical-compiler-r1
+# Hybrid mode: this file + engram topic sdd/clinical-compiler-r1/state
+change: clinical-compiler-r1
+mode: hybrid
+risk_policy: ask_on_risk
+updated: 2026-08-29
+
+phases:
+  sdd-explore: done # engram #7234
+  # engram #7235 - openspec/changes/clinical-compiler-r1/proposal.md
+  sdd-propose: done
+  sdd-spec: done # engram #7240, specs/ x7 domains
+  sdd-design: done # engram #7242, design.md (24.4KB, 8 frozen decisions)
+  sdd-tasks: done # engram #7244, tasks.md (42 tasks, 5 phases)
+  sdd-apply: done_pending_owner_commit # engram #7256; TODAS las fases done: P1 8/8, P2 11/11, P3 5/5 (EVIDENCE VALID), P4 8/8 (post R-4.7a); 406/406, cov 100% (634/212/0); R1-apply = done-pending-owner-commit (P3-F11)
+
+  sdd-verify: done # engram #7318, verify-report.md; VERDICT PASS_WITH_WARNINGS archive-ready; 66/69 SATISFIED (1 partial cerrado por ADJ-1, 2 N/A free-text condicional, 0 unsat); criterios 8/8; 0 CRITICAL, 2 WARNING no-bloqueantes (checkboxes hash-bound, manifest recipe)
+  sdd-archive: done # engram sdd/clinical-compiler-r1/archive-report; pre-flight 10/10 bundle hashes + manifest MATCH; 7 deltas merged a openspec/specs/ (first population, byte-faithful, no destructive deltas); change movido a changes/archive/2026-08-29-clinical-compiler-r1/; archive-report.md escrito
+
+next_phase: R2 (new change via sdd-explore/sdd-propose when the owner opens it; r2_debt ledger in archive-report.md; pending owner acts: P3-F10 ratification, Mimosa re-scan post-P3/P4)
+
+decision_gate_phase0: # CLOSED 2026-08-29 — resolutions in APPROVAL-PHASE1.md
+  adj1_baseline_anomalies_drift_counting: RECONCILED_NOT_COUNTING  # effective BASELINE_ANOMALIES = 0
+  input_contract_decision: STRUCTURED_FEED_ONLY
+  policy_seed_decision: DEFERRED_BY_OWNER
+  cli_surface_confirmation: CONFIRM_AS_DESIGNED
+  adj2_gitignore_scope_widening: APPLIED  # .pi/ + _ctx/ added
+  phase1_authorization: AUTHORIZED_WORK_UNIT_MODE
+
+bundle_hashes_sha256: # post-owner-adjudication manifest — supersedes post-CRC-fixes hashes (5 of 10 files changed)
+  proposal.md: 04ed8dafa60d85a15b693de984984eed1845c5d96643c0de20b79e99814dd840
+  design.md: 75335698149cee43243c2db6ef45d6d716c07de6dd60903fc19ac5ed45c7d9ef
+  tasks.md: 086e7884d4904f15900bb76af18500467ed44a29d724a5d11c109ba231cd9f0f
+  specs/cli-surface/spec.md: 580b1d2a0d20c4a9582b1451ba5e4f469622364ab70aee7a9a598c1e7a48f1cc
+  specs/clinical-fact-model/spec.md: 90ab38d41ad7112a1dfca1186d8e160d35bddec01f11c00820f49b530d392e54
+  specs/determinism-rendering/spec.md: 3a09007bad60e639d9ebdeee60b0379af4927e94d099d98b489dbd8229ad9c78
+  specs/diagnostics-policy/spec.md: ee9852b388cef55dfac37fef0ffca931795cb13eb0ca2871be28094397f50f23
+  specs/input-contract/spec.md: 7ffd272d5182ef5b09e13a9fb08bef75bfd310481c002d37c7f7f8a0930fdd7a
+  specs/phase0-verification/spec.md: f0314a15a3dee6c78f4b56519520a82d3148f5fd519b40d2dbd4ca137b991600
+  specs/pipeline-passes/spec.md: 0aa5627c3e73e8d034dcb41510f720bb14adb4757fe06689873f72eca0036147
+  bundle_manifest: 7a7d3a28afa749c362a2091f4ea0c60d25745f0ede49ac311b5e8d8511e0737d # SHA-256 of ordered concatenation: proposal, design, tasks, then specs/ in alphabetical domain order
+  computed: 2026-08-28
+
+validation_receipt:
+  contract_conformance_audit: engram #7246 (FAIL: 1×P0, 5×P1, 12×P2 — all repaired)
+  repair_log: engram #7247 (18/18 findings applied, 5 files)
+  post_repair_consistency_check:
+    PASS 2026-08-28
+    # 1. UNKNOWN→gate-blocking present in proposal + phase0-spec + tasks
+    # 2. ten-file binding formula present in proposal + design + tasks + phase0-spec
+    # 3. StageResult → pipeline_types.py adjudication present in design + tasks
+    # 4. uv run always --no-sync (policy declared + all invocations covered)
+    # 5. No leftovers of superseded wording (clean)
+  crc_ticket_coverage_fixes: engram #7250 (4 decision-independent fixes, 6 bundle files + state)
+  post_crc_fixes_consistency_check:
+    PASS 2026-08-28
+    # 1. source_asserted_certainty distinction present in design + tasks + 2 specs
+    # 2. UNRESOLVED_POLICY in design + diagnostics-policy spec + tasks; no silent-empty leftovers
+    # 3. CRC-004 adjudication cited in design + determinism-rendering spec
+    # 4. PENDING_OWNER_SEMANTIC_ADJUDICATION guard in design + tasks + clinical-fact-model spec
+  owner_crc_adjudication: engram #7251 (6/6 adjudications applied, 5 bundle files)
+  post_adjudication_consistency_check:
+    PASS 2026-08-28
+    # 1. SUCCESSOR_OF_V0_5 lineage block in design; zero greenfield leftovers
+    # 2. BOTH_SEPARATED authority model in design + tasks + 2 specs
+    # 3. NOT_PRODUCED semantics in design + spec + tasks; zero pending-guards left
+    # 4. CanonicalClinicalIR in design + spec + tasks (additive core/ir.py, D10)
+    # 5. ENFORCE_BOUNDED_VALUES_AT_RUNTIME + DEFER_CORE_TYPE_NARROWING_TO_R2 in design + spec + tasks
+    # 6. CRC-004 two-sided rule in design + determinism-rendering spec
+
+activation_gate:
+  status: AUTHORIZED_FOR_PHASE_0 # owner instruction "sdd apply ahora" 2026-08-29, bound in APPROVAL-PHASE0.md
+  record: openspec/changes/clinical-compiler-r1/APPROVAL-PHASE0.md
+  bound_manifest: 7a7d3a28afa749c362a2091f4ea0c60d25745f0ede49ac311b5e8d8511e0737d
+  rule: >
+    PHASE_0 is authorized read-only. Phases 1-4 remain blocked until the
+    owner-authored Phase 0 decision gate closes the three open questions.
+
+open_questions_for_owner:
+  - Input format for R1: structured feed vs free-text telegraphic notes vs both
+  - NEVER_AUTO_TERMS seed content now, or ship R1 with empty set
+  - CLI command name/surface (frozen in design, owner-reviewed at approval)
+
+ticket_coverage_adjudication:   # CRC ticket audit 2026-08-28 — MINI-CUSTOMS: CLOSED by owner adjudication
+  applied_fixes:
+    crc002_distinction: applied   # source_asserted != compiler_assigned, normative now
+    crc005_unresolved_policy: applied
+    crc004_adjudication: applied
+    crc001_guard: applied         # superseded by ADJ-3: pending guard upgraded to adjudicated rule
+  owner_decisions:
+    crc001_taxonomy: ADJUDICATED  # RETAIN_FOR_COMPATIBILITY; PROBABLE/LIKELY/UNLIKELY = NOT_PRODUCED in R1; auto mapping rejected
+    crc002_authority: ADJUDICATED # BOTH_SEPARATED: source=preserved clinical assertion, compiler=non-clinical processing state
+    crc003_aggregate: ADJUDICATED # CanonicalClinicalIR explicit lightweight aggregate (core/ir.py additive, D10)
+    crc006_any_boundary: ADJUDICATED # DEFER_CORE_TYPE_NARROWING_TO_R2 + ENFORCE_BOUNDED_VALUES_AT_RUNTIME now
+    crc010_lineage: ADJUDICATED   # PROJECT_LINEAGE=SUCCESSOR_OF_V0_5; REPOSITORY_TOPOLOGY=NEW_IMPLEMENTATION_REPOSITORY; MIGRATION_BASELINE=UNRESOLVED_UNTIL_EXACT_EVIDENCE
+  status: CLOSED                  # applied engram #7251, consistency check PASS
+  notes: >
+    Mini-customs closed. The activation gate remains NOT_AUTHORIZED solely on
+    the original Phase-0 open questions and the durable approval record.
+
+owner_recommendations_phase0_open_questions: # owner position 2026-08-28 — PENDING formal close
+  input_contract: structured feed for R1; free-text deferred to R2
+  policy_seed: NEVER_AUTO_TERMS as DEFERRED_BY_OWNER with durable state + test-local seeds
+  cli_surface: accept clinical-compiler compile ... as designed
+  note: >
+    Recorded as the owner's stated recommendation; formal close of these three
+    questions is a separate owner-authored act (inside the approval record).

@@ -1,0 +1,31 @@
+# Target freeze — FULL_ANTIDRIFT re-verification (PR-1)
+
+- audited_target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+- branch_at_audit: main
+- remote_pr_head_at_audit: r1-clinical-compiler @ 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd (identical to local HEAD)
+- working_tree_before_evidence: CLEAN — zero modified tracked files; the only untracked
+  entries were `.claude/` session runtime files (out of scope, never committed).
+- audit_utc_date: 2026-08-30
+
+## Brief-baseline note (honesty record)
+
+The executing brief froze `baseline_sha = 9b04fa2df4a62f23eea9ffbbeeffadd549e12ca8` and
+described a working-tree drift carrying the P0-1..P1-1 repairs. That freeze is SUPERSEDED
+by the repository's actual history: commit `9b04fa2` is the owner's docs commit ("docs: add
+compiler file study guide (owner reference)"), and the repairs it described were already
+COMMITTED and PUSHED as `7d0895133d0ca74a889e3f3270f3a4b9f497f4cd`
+("fix: close PR-1 audit defects P0-1..P1-1 (injection fail-closed, certainty traceability,
+empty-policy route, empty identifiers)") — the direct child of `9b04fa2`.
+
+Therefore:
+- modified_files_before this session: 0 (the drift described in the brief no longer existed
+  as uncommitted state; it was preserved verbatim INSIDE commit 7d08951).
+- writer_identity of that pre-7d08951 drift: PREVIOUS_ORCHESTRATOR_EXECUTION (the prior
+  session's repair agents; background in engram topics `sdd/pr1-repair/{diagnosis,fixes,verification}`).
+- preserved_diff_path: the repair diff is the commit itself — `git show 7d089513`; see also
+  this evidence directory's `README.md` (target-freeze statement) and the battery logs,
+  all of which prove the repairs against the COMMITTED tree at 7d089513, not a working tree.
+
+This session authored NO source-code changes: every battery item ran against
+`HEAD = 7d089513` with a clean tree. The only files this session creates are the evidence
+directory you are reading and the appended re-verification section in `verify-report.md`.

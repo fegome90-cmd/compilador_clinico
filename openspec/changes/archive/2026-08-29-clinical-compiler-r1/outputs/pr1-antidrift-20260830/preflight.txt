@@ -1,0 +1,55 @@
+=== PREFLIGHT — FULL_ANTIDRIFT executor, rerun at evidence-freeze time ===
+date_utc: 2026-08-30T10:22:15Z
+
+$ git rev-parse --show-toplevel
+/Users/felipe_gonzalez/Developer/compilador_clinico
+--- exit=0
+
+$ git branch --show-current
+main
+--- exit=0
+
+$ git rev-parse HEAD
+7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- exit=0
+
+$ git status --short
+?? .claude/
+?? openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/
+--- exit=0
+
+$ git diff --stat
+--- exit=0
+
+$ git diff --name-status
+--- exit=0
+
+$ git ls-files --others --exclude-standard
+.claude/context-memory-id
+.claude/context_memory/.compact_counter
+.claude/context_memory/.compact_counter.lock
+.claude/context_memory/sessions/current.jsonl
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/01-pytest-coverage.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/02-mypy-strict.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/03-ruff-check.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/04-golden-machinery-verify.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/05-determinism-hashseed.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/06-git-diff-check.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/07-imports-review.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/08-zero-runtime-deps.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/09-determinism-scan.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/10-admissibility-explicit-policy.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/11-doc-diagnostics-noncoexistence.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/battery/12-exit70-sweep.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-antidrift-20260830/preflight.txt
+--- exit=0
+
+$ git log --oneline -3
+7d08951 fix: close PR-1 audit defects P0-1..P1-1 (injection fail-closed, certainty traceability, empty-policy route, empty identifiers)
+9b04fa2 docs: add compiler file study guide (owner reference)
+ae69428 chore(sdd): archive clinical-compiler-r1 — merge 7 domain specs to main, move change to audit trail
+--- exit=0
+
+$ git ls-remote origin r1-clinical-compiler
+7d0895133d0ca74a889e3f3270f3a4b9f497f4cd	refs/heads/r1-clinical-compiler
+--- exit=0

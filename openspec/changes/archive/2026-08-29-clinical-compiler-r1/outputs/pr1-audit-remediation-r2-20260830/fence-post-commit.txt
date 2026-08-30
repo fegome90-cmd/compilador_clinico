@@ -1,0 +1,16 @@
+# Fence POST-COMMIT — worktree-2 (clean detached checkout of C1), captured AFTER the battery
+purpose: prove the battery ran against the committed C1 tree with NO writes (audit §6 discipline)
+
+$ git rev-parse HEAD   # captured 2026-08-30T12:04:26Z
+b8c0c46b99290863faa6c4c42c10d947c40c6e51
+expected: b8c0c46b99290863faa6c4c42c10d947c40c6e51 (C1)
+
+$ git status --porcelain   # captured 2026-08-30T12:04:26Z
+(EMPTY — zero lines; battery produced no working-tree writes, no cache artifacts)
+
+Battery items 01-08 each recorded tree_after porcelain line count in their own logs (all 0).
+Fence captured at 2026-08-30T12:04:26Z by the ROUND 2 remediation run.
+
+Precision note (appended 2026-08-30T12:04:38Z): 'porcelain EMPTY' covers all non-ignored files. Git-IGNORED runtime caches (per .gitignore: .venv/, __pycache__/, .pytest_cache/, .mypy_cache/, .ruff_cache/, .coverage) DO exist in worktree-2 as a byproduct of running the battery there; they are outside version control by design and contain no source. No tracked or untracked-unignored file was created or modified.
+
+Copy note: byte-identical copy of battery/09-fence-post-commit.txt (kept in battery/ so the fence is numbered within the battery sequence); this root copy matches the prescribed artifact name.

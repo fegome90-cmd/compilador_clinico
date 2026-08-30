@@ -1,0 +1,14 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:18:57Z
+description: CLI determinism: 3 cases (valid-baseline, declared-certainty pair, golden standard_mixed) x PYTHONHASHSEED=0/12345/random — cmp byte-compare of stdout+stderr+exit
+command: /tmp/pr1-antidrift-scratch/determinism_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+case=valid-baseline exit_seeds=[0,0,0] stdout_sha(seed0)=62aac281bc9986ddd1a4707cf1d89f3102c8a8dce46cdb188efbaf75c061efd4 bytes=59 -> BYTE-IDENTICAL
+case=p02-both exit_seeds=[0,0,0] stdout_sha(seed0)=55eb0bfa087b6922b32c0f675c3ef7f66360eaf44d8c51af22f417e203007b63 bytes=60 -> BYTE-IDENTICAL
+case=golden-standard_mixed exit_seeds=[0,0,0] stdout_sha(seed0)=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc bytes=68 -> BYTE-IDENTICAL
+determinism_overall_exit=0
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 0 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: 
