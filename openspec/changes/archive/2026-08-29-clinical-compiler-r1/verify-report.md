@@ -327,7 +327,7 @@ Honest record: in the prior run (`outputs/pr1-antidrift-20260830/`), the preflig
 
 ## AUDIT REMEDIATION ROUND 2 (2026-08-30, worktree of aff8b21 → new commit)
 
-Executed from a CLEAN DETACHED WORKTREE of the PR head `aff8b219e197c4f04ff464f5ffe5a6b6e6bc05c8` (`compilador_clinico-audit-cec43d3`); the main tree was never touched (its external uncommitted edit is preserved per owner disposition). This section closes the two BLOCKERS of the independent audit round 2 and applies the four non-blocking dispositions. Nothing above is altered. All fresh evidence lives in `outputs/pr1-audit-remediation-r2-20260830/` (preflight, repro-before-fix, RED/GREEN logs, battery logs each embedding UTC timestamps + target SHA + tree status, post-commit fence). Target state: **C1** — the code+report commit carrying this section (its exact SHA is frozen by the commit itself and recorded in the evidence README, the fence, and the PR body; the post-commit battery runs in a SEPARATE clean detached checkout of C1, not in the authoring worktree).
+Executed from a CLEAN DETACHED WORKTREE [CORRECTION 2026-08-30: read as "tracked source tree clean; evidence directory intentionally untracked" — see INDEPENDENT AUDIT CERTIFICATION] of the PR head `aff8b219e197c4f04ff464f5ffe5a6b6e6bc05c8` (`compilador_clinico-audit-cec43d3`); the main tree was never touched (its external uncommitted edit is preserved per owner disposition). This section closes the two BLOCKERS of the independent audit round 2 and applies the four non-blocking dispositions. Nothing above is altered. All fresh evidence lives in `outputs/pr1-audit-remediation-r2-20260830/` (preflight, repro-before-fix, RED/GREEN logs, battery logs each embedding UTC timestamps + target SHA + tree status, post-commit fence). Target state: **C1** — the code+report commit carrying this section (its exact SHA is frozen by the commit itself and recorded in the evidence README, the fence, and the PR body; the post-commit battery runs in a SEPARATE clean detached checkout of C1, not in the authoring worktree).
 
 ### BLOCKER 1 — linter canonical-character parity (defense-in-depth, closed)
 
@@ -356,3 +356,31 @@ The full battery runs POST-COMMIT in a SEPARATE detached worktree created from C
 ### Verdict
 
 Two audit BLOCKERS closed at C1 with repro-before → RED → GREEN → post-commit-clean-checkout evidence; four dispositions applied. **Operative verdict: BLOCKED — pending independent re-audit of C1 by a reviewer ≠ executor.** No PASS / MERGE_READY / ARCHIVE_READY state exists for this change until that certification.
+
+## INDEPENDENT AUDIT CERTIFICATION (2026-08-30)
+
+The independent auditor (reviewer ≠ executor) completed the re-audit of PR #1 @ `7edbaa6085c44b6e513993cc7d6ab41c41605198` — code frozen at **C1** `b8c0c46b99290863faa6c4c42c10d947c40c6e51`, followed only by evidence commit C2 — and certified: **MERGE_READY**. The prior **BLOCKED** verdict is WITHDRAWN. This is the operative verdict of the change.
+
+### Auditor's final gate (all PASS)
+
+| # | Gate | Result |
+|---|------|--------|
+| 1 | Subject remoto (reviewer ≠ executor) | PASS |
+| 2 | C1→C2 isolation (evidence-only commit; no tested-file changes between C1 and C2) | PASS |
+| 3 | Linter 67-char parity | PASS |
+| 4 | Renderer 67-char closure | PASS |
+| 5 | FC-11 exact scenario | PASS |
+| 6 | Fail-closed / exit 10 | PASS |
+| 7 | Full post-commit battery (622 passed, 707 stmts, 252 branches, 0 misses) | PASS |
+| 8 | Post-commit fence (HEAD==C1, porcelain empty) | PASS |
+| 9 | PR claim hygiene | PASS |
+| 10 | Nuevo drift técnico | NONE FOUND |
+
+### Residual observations (both non-blocking)
+
+1. **Wording drift inside the ROUND 2 report intro:** it re-uses "CLEAN DETACHED WORKTREE" while its own preflight correctly says "tracked source tree clean; evidence directory intentionally untracked" — raw state correctly recorded, and the battery ran in the truly-clean worktree-2. **Disposition: CORRECTED in this update** — a one-line `[CORRECTION 2026-08-30: …]` note is inserted immediately after the phrase above (surgical insert, history visible; nothing above rewritten).
+2. **CI absent:** GitHub Actions does not run for this repository → the PR is manual-independent-audit verified, not CI-certified. **Disposition: OPEN, non-blocking** — CI as first R2 item remains the right improvement.
+
+### Caveat (auditor's clause)
+
+The MERGE_READY verdict applies unless a new commit at head touches `src/`, `tests/`, normative specs (`openspec/specs/`) or the fault corpus (design docs). **This documentary commit (C3) touches none of those** — it modifies only this verify-report (this append plus the one bracketed correction note in the ROUND 2 intro), leaving the certified code SHA C1 `b8c0c46b99290863faa6c4c42c10d947c40c6e51` intact.
