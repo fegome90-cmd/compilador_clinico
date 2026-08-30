@@ -47,14 +47,16 @@ Determinism (design Determinism Mechanism): ``clinical_fact_id`` is
 derived from fact identity — ``field_id`` plus the SHA-256 digest over
 the canonical-JSON preimage of the codepoint-sorted contributing
 ``fact_id`` set (stdlib ``hashlib``/``json`` only; never random, uuid,
-or time). ``source_fact_refs`` are stored codepoint-sorted so the same
-contributor set always constructs the identical canonical fact; the
-merged fact's ``ClinicalValue.provenance`` is the first-encountered
-contributor's provenance (equal authority ⇒ no precedence rule
-exists — flagged in the apply report). Faults surface as diagnostics,
-never as exceptions crossing the stage boundary (design M2.1). This
-stage never imports ``pipeline`` (D5): its stage contract comes from
-the :mod:`clinical_compiler.pipeline_types` leaf.
+or time). Contributors are canonically ordered by ``fact_id`` before
+choosing the structural representative, formatting conflict messages,
+and emitting canonical facts; duplicate ids use deterministic
+structural tie-breaks only. ``source_fact_refs`` are stored in that
+canonical order so the same contributor set always constructs the
+identical canonical fact. No source metadata establishes precedence.
+Faults surface as diagnostics, never as exceptions crossing the stage
+boundary (design M2.1). This stage never imports ``pipeline`` (D5):
+its stage contract comes from the :mod:`clinical_compiler.pipeline_types`
+leaf.
 """
 
 import hashlib
@@ -81,6 +83,47 @@ def _interpret(fact: SourceFactIR) -> tuple[Missingness, object]:
     return (Missingness.PRESENT, fact.raw_value)
 
 
+def _stable_raw_value_key(value: object) -> tuple[str, str]:
+    """Return a deterministic tie-break key without coercing values.
+
+    Validated inputs are exactly ``int``/``float``/``str``/``None`` for
+    the R1 fields. Unsupported values are outside that contract; the
+    type-name fallback is deliberately structural and never uses
+    ``repr`` or object hashing.
+    """
+    if value is None:
+        return ("none", "")
+    value_type = type(value)
+    if value_type is int:
+        return ("int", str(value))
+    if value_type is float:
+        return ("float", value.hex())
+    if value_type is str:
+        return ("str", value)
+    return (
+        "type",
+        f"{value_type.__module__}.{value_type.__qualname__}",
+    )
+
+
+def _contributor_sort_key(
+    fact: SourceFactIR,
+) -> tuple[str, str, str, str, tuple[str, str]]:
+    """Order contributors by structural identity, never clinical authority.
+
+    ``fact_id`` is primary. The remaining fields are only deterministic
+    tie-breaks for duplicate ids; they do not adjudicate interpretations
+    or grant precedence to a source kind.
+    """
+    return (
+        fact.fact_id,
+        fact.field_id,
+        fact.provenance.source_ref,
+        fact.provenance.source_kind,
+        _stable_raw_value_key(fact.raw_value),
+    )
+
+
 def _clinical_fact_id(field_id: str, refs: tuple[str, ...]) -> str:
     """Derive the canonical fact id from fact identity (deterministic).
 
@@ -101,11 +144,12 @@ def run_semantic_normalization(
     """Normalize validated survivors into canonical clinical facts (D8).
 
     Pure and deterministic: identical fact sets — conflicts included —
-    normalize identically. Groups survivors by ``field_id`` (in
-    first-encounter field order); an unambiguous group yields exactly
-    one canonical fact citing all its contributors, a conflicted group
-    yields one ``SEMANTIC_AMBIGUITY_BLOCK`` diagnostic per quarantined
-    fact and no canonical fact.
+    normalize identically. Groups survivors by ``field_id`` in
+    codepoint order and canonically orders each contributor group;
+    an unambiguous group yields exactly one canonical fact citing all
+    its contributors, a conflicted group yields one
+    ``SEMANTIC_AMBIGUITY_BLOCK`` diagnostic per quarantined fact and no
+    canonical fact.
     """
     groups: dict[str, list[SourceFactIR]] = {}
     for fact in facts:
@@ -113,7 +157,8 @@ def run_semantic_normalization(
 
     admitted: list[CanonicalClinicalFact] = []
     diagnostics: list[Diagnostic] = []
-    for field_id, group in groups.items():
+    for field_id in sorted(groups):
+        group = tuple(sorted(groups[field_id], key=_contributor_sort_key))
         distinct: list[tuple[Missingness, object]] = []
         for fact in group:
             interpretation = _interpret(fact)
@@ -134,18 +179,18 @@ def run_semantic_normalization(
                 )
             continue
 
-        first = group[0]
+        representative = group[0]
         missingness = distinct[0][0]
-        refs = tuple(sorted(fact.fact_id for fact in group))
+        refs = tuple(fact.fact_id for fact in group)
         admitted.append(
             CanonicalClinicalFact(
                 clinical_fact_id=_clinical_fact_id(field_id, refs),
                 field_id=field_id,
                 value=ClinicalValue(
-                    value=first.raw_value,
+                    value=representative.raw_value,
                     certainty=Certainty.UNRESOLVED,
                     missingness=missingness,
-                    provenance=first.provenance,
+                    provenance=representative.provenance,
                 ),
                 source_fact_refs=refs,
             )

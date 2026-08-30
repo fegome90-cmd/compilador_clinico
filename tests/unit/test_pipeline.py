@@ -180,6 +180,32 @@ def test_two_identical_runs_produce_identical_results() -> None:
     assert first.document == second.document
 
 
+def test_accept_r1_001_reversed_feeds_render_identical_documents() -> None:
+    """ACCEPT-R1-001: exact A/B feeds differ only in record order."""
+    monitor = _record(
+        fact_id="accept-r1-001-monitor",
+        raw_value=72,
+        provenance={"source_kind": "monitor", "source_ref": "monitor-primary"},
+    )
+    lab = _record(
+        fact_id="accept-r1-001-lab",
+        raw_value=72,
+        provenance={"source_kind": "lab", "source_ref": "lab-corroborating"},
+    )
+    feed_a = _feed(_line(monitor), _line(lab))
+    feed_b = _feed(_line(lab), _line(monitor))
+
+    result_a = run(_request(feed_a))
+    result_b = run(_request(feed_b))
+
+    assert result_a.diagnostics == result_b.diagnostics == ()
+    assert result_a.document is not None and result_b.document is not None
+    assert result_a.document == result_b.document
+    assert derive_exit_code(result_a.diagnostics) == derive_exit_code(
+        result_b.diagnostics
+    ) == 0
+
+
 # --- 2. Golden equivalence: the production composition IS the chain -------
 
 

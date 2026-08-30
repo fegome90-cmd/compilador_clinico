@@ -1,6 +1,7 @@
 """Unit tests for clinical_compiler.passes.semantic_normalization."""
 
 from collections.abc import Callable
+from itertools import permutations
 from typing import cast
 
 import pytest
@@ -342,6 +343,156 @@ def test_corroborating_duplicate_values_merge_into_one_fact() -> None:
     assert result.admitted[0].source_fact_refs == ("raw-1", "raw-2")
 
 
+def _observable_canonical_fact(fact: CanonicalClinicalFact) -> tuple[str, ...]:
+    """Capture the canonical representation without numeric coercion."""
+    raw_value = fact.value.value
+    return (
+        fact.clinical_fact_id,
+        fact.field_id,
+        type(raw_value).__name__,
+        repr(raw_value),
+        fact.value.certainty.value,
+        fact.value.missingness.value,
+        fact.value.provenance.source_kind,
+        fact.value.provenance.source_ref,
+        repr(fact.source_fact_refs),
+    )
+
+
+def test_two_corroborants_are_invariant_under_reversed_input_order() -> None:
+    """ACCEPT-R1-001: the same corroborating facts normalize identically."""
+    monitor = _fact(
+        fact_id="accept-r1-001-monitor",
+        raw_value=72,
+        provenance=Provenance("monitor", "monitor-primary"),
+    )
+    lab = _fact(
+        fact_id="accept-r1-001-lab",
+        raw_value=72,
+        provenance=Provenance("lab", "lab-corroborating"),
+    )
+
+    forward = run_semantic_normalization((monitor, lab))
+    reversed_order = run_semantic_normalization((lab, monitor))
+
+    assert forward.diagnostics == reversed_order.diagnostics == ()
+    assert forward == reversed_order
+
+
+def test_int_and_float_corroborants_have_stable_observable_representation() -> None:
+    """ACCEPT-R1-001: 72 and 72.0 stay stable in either encounter order."""
+    integer = _fact(
+        fact_id="accept-r1-001-int",
+        raw_value=72,
+        provenance=Provenance("monitor", "monitor-primary"),
+    )
+    floating = _fact(
+        fact_id="accept-r1-001-float",
+        raw_value=72.0,
+        provenance=Provenance("lab", "lab-corroborating"),
+    )
+
+    forward = run_semantic_normalization((integer, floating))
+    reversed_order = run_semantic_normalization((floating, integer))
+
+    assert forward.diagnostics == reversed_order.diagnostics == ()
+    assert len(forward.admitted) == len(reversed_order.admitted) == 1
+    assert _observable_canonical_fact(forward.admitted[0]) == (
+        _observable_canonical_fact(reversed_order.admitted[0])
+    )
+
+
+def test_three_corroborants_are_invariant_over_all_six_permutations() -> None:
+    """ACCEPT-R1-001: all 3! orders produce one stable canonical fact."""
+    facts = (
+        _fact(
+            fact_id="accept-r1-001-a",
+            raw_value=72,
+            provenance=Provenance("monitor", "monitor-primary"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-b",
+            raw_value=72,
+            provenance=Provenance("lab", "lab-corroborating"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-c",
+            raw_value=72,
+            provenance=Provenance("clinical_note", "note-corroborating"),
+        ),
+    )
+    baseline = run_semantic_normalization(facts)
+    expected = tuple(_observable_canonical_fact(fact) for fact in baseline.admitted)
+
+    orders = tuple(permutations(facts))
+    assert len(orders) == 6
+    for ordered_facts in orders:
+        result = run_semantic_normalization(ordered_facts)
+        assert result.diagnostics == ()
+        assert tuple(_observable_canonical_fact(fact) for fact in result.admitted) == (
+            expected
+        )
+
+
+def test_conflict_diagnostics_are_stable_when_group_order_is_reversed() -> None:
+    """Conflicting groups keep identical diagnostic messages and ordering."""
+    first = _fact(
+        fact_id="accept-r1-001-conflict-a",
+        raw_value=72,
+        provenance=Provenance("monitor", "monitor-primary"),
+    )
+    second = _fact(
+        fact_id="accept-r1-001-conflict-b",
+        raw_value=80,
+        provenance=Provenance("lab", "lab-conflicting"),
+    )
+
+    forward = run_semantic_normalization((first, second))
+    reversed_order = run_semantic_normalization((second, first))
+
+    assert forward.admitted == reversed_order.admitted == ()
+    assert forward.diagnostics == reversed_order.diagnostics
+
+
+def test_multiple_fields_are_invariant_under_global_input_permutations() -> None:
+    """All global orders preserve canonical facts across FC and TA fields."""
+    facts = (
+        _fact(
+            fact_id="accept-r1-001-fc-monitor",
+            field_id="FC",
+            raw_value=72,
+            provenance=Provenance("monitor", "monitor-primary"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-fc-lab",
+            field_id="FC",
+            raw_value=72,
+            provenance=Provenance("lab", "lab-corroborating"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-ta-monitor",
+            field_id="TA",
+            raw_value="120/80",
+            provenance=Provenance("monitor", "monitor-ta"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-ta-note",
+            field_id="TA",
+            raw_value="120/80",
+            provenance=Provenance("clinical_note", "note-ta"),
+        ),
+    )
+    baseline = run_semantic_normalization(facts)
+    expected = tuple(_observable_canonical_fact(fact) for fact in baseline.admitted)
+
+    for ordered_facts in permutations(facts):
+        result = run_semantic_normalization(ordered_facts)
+        assert result.diagnostics == ()
+        assert tuple(_observable_canonical_fact(fact) for fact in result.admitted) == (
+            expected
+        )
+
+
 def test_corroborating_absence_merges() -> None:
     """Two sources asserting the same absence corroborate it."""
     facts = (
@@ -383,11 +534,11 @@ def test_provenance_carried_through(
     assert result.admitted[0].value.provenance == provenance
 
 
-def test_merged_fact_uses_first_encountered_provenance() -> None:
-    """Equal authority means no precedence — first contributor carries it."""
+def test_merged_fact_uses_structural_representative_provenance() -> None:
+    """Equal authority uses the lowest fact_id, not encounter order."""
     facts = (
-        _fact(fact_id="raw-1", provenance=Provenance("monitor", "m-9")),
         _fact(fact_id="raw-2", provenance=Provenance("lab", "l-2")),
+        _fact(fact_id="raw-1", provenance=Provenance("monitor", "m-9")),
     )
     result = run_semantic_normalization(facts)
     assert result.admitted[0].value.provenance == Provenance("monitor", "m-9")
