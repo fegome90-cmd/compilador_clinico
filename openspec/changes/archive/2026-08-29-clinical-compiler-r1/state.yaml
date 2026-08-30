@@ -3,7 +3,7 @@
 change: clinical-compiler-r1
 mode: hybrid
 risk_policy: ask_on_risk
-updated: 2026-08-28
+updated: 2026-08-29
 
 phases:
   sdd-explore: done # engram #7234
@@ -14,10 +14,10 @@ phases:
   sdd-tasks: done # engram #7244, tasks.md (42 tasks, 5 phases)
   sdd-apply: done_pending_owner_commit # engram #7256; TODAS las fases done: P1 8/8, P2 11/11, P3 5/5 (EVIDENCE VALID), P4 8/8 (post R-4.7a); 406/406, cov 100% (634/212/0); R1-apply = done-pending-owner-commit (P3-F11)
 
-  sdd-verify: pending
-  sdd-archive: pending
+  sdd-verify: done # engram #7318, verify-report.md; VERDICT PASS_WITH_WARNINGS archive-ready; 66/69 SATISFIED (1 partial cerrado por ADJ-1, 2 N/A free-text condicional, 0 unsat); criterios 8/8; 0 CRITICAL, 2 WARNING no-bloqueantes (checkboxes hash-bound, manifest recipe)
+  sdd-archive: done # engram sdd/clinical-compiler-r1/archive-report; pre-flight 10/10 bundle hashes + manifest MATCH; 7 deltas merged a openspec/specs/ (first population, byte-faithful, no destructive deltas); change movido a changes/archive/2026-08-29-clinical-compiler-r1/; archive-report.md escrito
 
-next_phase: owner commit (payload P3+P4 + deletion adapters/README.md) → sdd-verify → sdd-archive → R2
+next_phase: R2 (new change via sdd-explore/sdd-propose when the owner opens it; r2_debt ledger in archive-report.md; pending owner acts: P3-F10 ratification, Mimosa re-scan post-P3/P4)
 
 decision_gate_phase0: # CLOSED 2026-08-29 — resolutions in APPROVAL-PHASE1.md
   adj1_baseline_anomalies_drift_counting: RECONCILED_NOT_COUNTING  # effective BASELINE_ANOMALIES = 0
