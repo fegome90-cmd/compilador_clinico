@@ -146,13 +146,22 @@ Key structural properties preserved across all layers:
 
 ## Dependency Rules
 
-**Allowed Direction:**
-- `cli` -> `pipeline` -> `{passes, renderers, linter}` -> `{adapters, pipeline_types}` -> `core` -> `types`
+**Architectural Layer Hierarchy:**
+`cli` -> `pipeline` -> `{passes, renderers, linter}` -> `{adapters, pipeline_types}` -> `core` -> `types`
+
+**Direct Module Permissions & Import Edges:**
+- `cli`: Imports `pipeline`, `adapters.seed`, `passes.document_selection`, and `core.diagnostics`.
+- `pipeline` (composition root): Imports all passes, renderers, linter, adapters, `pipeline_types`, and `core`.
+- `passes.input_validation`, `renderers.deterministic`, `linter.conformance`: Direct import of `adapters.contract` permitted for field contracts, vocabulary definitions, and allowed constants.
+- `passes.semantic_normalization`, `passes.admissibility`, `passes.document_selection`: Pure passes importing only `core` and `pipeline_types` (never `adapters`).
+- `adapters.structured_feed`: Imports `adapters.contract` and `core.diagnostics`. `adapters.seed` is self-contained.
+- `pipeline_types`: Leaf contract container importing only `core.diagnostics`.
+- `core`: Pure leaf domain layer importing standard library only (`core.ir` imports `core.types`).
 
 **Forbidden Edges:**
 - `core` must never import `adapters`, `passes`, `renderers`, `linter`, `pipeline`, or `cli`.
-- `pipeline_types` must never import `pipeline`.
-- `passes` must never import `pipeline`, `cli`, `renderers`, or `linter`.
+- `pipeline_types` must never import `pipeline` or passes.
+- Passes must never import `pipeline`, `cli`, `renderers`, or `linter`.
 - `renderers` and `linter` must never import `pipeline` or `passes`.
 - `adapters` must never import `pipeline`, `passes`, `renderers`, `linter`, or `cli`.
 
@@ -190,8 +199,9 @@ Key structural properties preserved across all layers:
 ### Quarantined Fact Compilation (Fail-Closed Diagnostic Exit)
 1. Input contains three facts: one invalid type (e.g. `bool` for `FC`), two valid facts.
 2. Input validation quarantines the invalid fact with a diagnostic and returns two surviving facts.
-3. Because diagnostics are present at the whole-run emission gate, document emission is suppressed.
-4. CLI emits diagnostics to stderr and exits with the exit code corresponding to the earliest stage-order diagnostic (exit 4 in this scenario).
+3. Because diagnostics are present, `pipeline.run` sets `document=None`, preventing document emission entirely.
+4. `derive_exit_code` selects the minimum stage-order code among present diagnostics in the 3–10 range (exit 4 in this scenario) rather than exit 0 or a partial document.
+5. CLI emits accumulated diagnostics to stderr and exits with the derived exit code.
 
 ### Unresolved Policy Failure (CLI Usage Exit 2)
 1. User provides `--policy-seed bad_seed.json` with malformed structure.

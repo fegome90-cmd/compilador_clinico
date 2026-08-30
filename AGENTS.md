@@ -32,7 +32,7 @@ If code and specifications disagree, identify the discrepancy rather than silent
 ## Working Rules
 
 - Inspect live implementation before editing. Keep changes minimal, typed, and reversible.
-- Respect the dependency rule: `cli -> pipeline -> {passes, renderers, linter} -> {adapters, pipeline_types} -> core -> types`. Leaf `core` has zero internal package dependencies.
+- Respect the dependency hierarchy: `cli -> pipeline -> {passes, renderers, linter} -> {adapters, pipeline_types} -> core -> types`. Direct imports are explicitly bounded (see `docs/agent/ARCHITECTURE.md`); `core` is a leaf with zero internal dependencies.
 - Preserve safety invariants: zero runtime dependencies; immutable `tuple` collections; explicit codepoint sort `(field_id, clinical_fact_id)`; LF-only UTF-8 bytes.
 - Never conflate source-declared certainty (`source_asserted_certainty`) with compiler certainty (`ClinicalValue.certainty`). `source_kind` informs provenance only.
 - Never add `NEVER_AUTO_TERMS` entries without an owner-authored `--policy-seed` or recorded `DEFERRED_BY_OWNER_DECISION`.
@@ -53,7 +53,8 @@ uv run --no-sync ruff check src tests
 uv run --no-sync mypy --strict src
 
 # structural context validation
-python /tmp/acs-v11-live/agent-context-system/scripts/validate_agent_context.py .
+# structural context validation (with ACS_ROOT set to agent-context-system skill path)
+python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" .
 ```
 
 Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, and structural context valid.

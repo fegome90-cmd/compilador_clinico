@@ -53,7 +53,7 @@ pipeline.py → cli.py
      documento a stdout/--output; diagnósticos a stderr; exit code
 ```
 
-El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:188-268`) y se describe normativamente en `openspec/specs/` y `docs/agent/ARCHITECTURE.md` (con registro histórico en `openspec/changes/archive/2026-08-29-clinical-compiler-r1/design.md`).
+El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:222-306`) y se describe normativamente en `openspec/specs/` y `docs/agent/ARCHITECTURE.md` (con registro histórico en `openspec/changes/archive/2026-08-29-clinical-compiler-r1/design.md`).
 
 ## Glosario esencial
 
@@ -485,7 +485,7 @@ Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 | Convención `--no-sync` inconsistente | `tasks.md:5,20` la exige | Ejemplos del README (`:120-125,285-293`) la omiten | Para ejecución futura debe prevalecer la restricción del SDD; esta guía no ejecutó esos comandos. |
 | Docstring del golden chain es histórica | `tests/golden/golden_machinery.py:10-15` dice que `pipeline.py` aún no existe | `src/clinical_compiler/pipeline.py` sí existe | La machinery conserva texto de la etapa previa y recompone el chain por razones de test. |
 | Sketch de interfaces difiere de firmas reales | `design.md:305-329` muestra `str | None` y `run_admissibility(facts, veto_terms)` | El pipeline usa `bytes | None` (`pipeline.py:149`) y admissibility exige `source_fact_ids` (`:102-106`) | El propio código documenta estas lecturas mínimas; son seams de contrato, no detalles que deban inferirse. |
-| Seed vacío tiene una diferencia semántica | `docs/architecture.md:99` habla de términos no vacíos | `load_policy_seed` acepta `{"terms": []}` (`seed.py:273-297`); test explícito en `test_adapters_seed.py:154-166` | El comportamiento de seed maneja `EMPTY_TERMS` y `UNRESOLVED_POLICY` cuando el seed no contiene términos o es inválido, requiriendo `DEFERRED_BY_OWNER` si la bandera se omite. |
+| Seed vacío tiene una diferencia semántica | `openspec/specs/admissibility/spec.md` y `seed.py:298-305` | `load_policy_seed` rechaza `{"terms": []}` con `EMPTY_TERMS` y retorna `UNRESOLVED_POLICY`; test en `test_adapters_seed.py:154-166` | Preserva el fail-closed: el set vacío solo es legal vía `DEFERRED_BY_OWNER_DECISION` cuando se omite el flag. |
 | Certainty de fuente no llega al documento | `design.md:281-286` separa ambas autoridades | `StructuredFeedFact` la conserva, pero `pipeline.py:203-218` reenvía solo `wrapper.fact` | En R1 la assertion vive en `SourceFactIR.source_asserted_certainty` y se expone en `CompileResult.source_asserted_certainties`; el canonical fact/render solo lleva certainty del compilador, siempre `UNRESOLVED`. |
 
 ## Ruta de lectura recomendada

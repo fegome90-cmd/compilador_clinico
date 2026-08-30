@@ -59,7 +59,7 @@ No daemon, background worker, web server, database connection, or network socket
 
 The compiler maps execution outcomes to strict process exit codes:
 - `0`: Success (clean document compiled and emitted).
-- `2`: CLI usage error, invalid options, or malformed `--policy-seed` syntax.
+- `2`: CLI usage error, invalid options, or unresolved policy from an invalid/malformed `--policy-seed`.
 - `3`: Input contract fault (`INPUT_CONTRACT_ERROR` — malformed JSON, unknown keys, invalid schema).
 - `4`: Field type mismatch (`TYPE_ERROR` — non-conforming exact runtime type).
 - `5`: Semantic ambiguity (`SEMANTIC_AMBIGUITY_BLOCK` — multiple interpretations without disambiguator).
@@ -68,7 +68,7 @@ The compiler maps execution outcomes to strict process exit codes:
 - `8`: Document selection fault (`DOCUMENT_SELECTION_ERROR` — no admissible entries for target mode).
 - `9`: Rendering fault (`RENDER_ERROR` — internal IR / rendering inconsistency).
 - `10`: Conformance lint failure (`LINT_FAILURE` — rendered bytes violate mode grammar/vocabulary).
-- `70`: Unresolved policy or internal compiler diagnostic.
+- `70`: Unexpected internal compiler failure or unhandled runtime exception.
 
 ## Output and Atomic Writes
 

@@ -58,7 +58,7 @@ CLI (cli.py:main)
        -> [Emission Gate: Fail-Closed check]
        -> renderers.deterministic:render_document
        -> linter.conformance:lint_conformance
-  -> CLI writes atomic output file or emits stderr diagnostics
+  -> CLI emits document to stdout (if no --output), writes atomic output file (if --output), or emits stderr diagnostics on failure
 ```
 
 ## Change Surface Map
