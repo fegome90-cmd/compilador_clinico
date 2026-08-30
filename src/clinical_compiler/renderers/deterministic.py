@@ -22,6 +22,18 @@ renderer's — the renderer is bytes-out only).
   yields ``RENDER_ERROR`` and NO partial document. Only the dangling
   direction is corpus-frozen (FC-10); the duplicate/omission arms are
   the same bijection invariant read fail-closed (FLAGGED).
+- FC-11 presentation-role boundary (audit remediation ROUND 2,
+  2026-08-30): every entry's ``presentation_role`` is validated
+  against the mode's allowed set (:data:`MODE_ALLOWED_PRESENTATION_ROLES`
+  — the renderer is the LAST point where the role exists; the linter
+  only sees bytes, so validating there is impossible). A role outside
+  the set — including any role at all under an unknown mode, whose
+  allowed set is empty — is FC-11's prescribed ``LINT_FAILURE`` per
+  invalid entry, fail-closed (no partial document); the frozen
+  exit-code table maps the diagnostic CODE (not the emitting stage) to
+  exit 10. The vocabulary is deliberately DUPLICATED from
+  ``passes/document_selection`` (renderers must not import passes —
+  D5), parity pinned TEST-side.
 - Determinism net (Determinism Mechanism #3/#4): a value whose type
   has no canonical rendering (anything beyond ``str``/``int``/
   ``float`` by exact type — a ``dict``/``set`` ``str()`` would leak
@@ -74,6 +86,8 @@ render identical bytes. This stage never imports ``pipeline`` or
 :mod:`clinical_compiler.pipeline_types`.
 """
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import Final
 
 from clinical_compiler.adapters.contract import CONTRACT
@@ -82,9 +96,40 @@ from clinical_compiler.core.ir import CanonicalClinicalIR, DocumentIR
 from clinical_compiler.core.types import ClinicalValue, Missingness
 from clinical_compiler.pipeline_types import StageResult
 
-__all__ = ["CANONICAL_BREAKING_CHARACTERS", "render_document"]
+__all__ = [
+    "CANONICAL_BREAKING_CHARACTERS",
+    "MODE_ALLOWED_PRESENTATION_ROLES",
+    "render_document",
+]
 
 _UNASSESSED_GLYPH: str = "unknown"
+
+# FC-11 presentation-role vocabulary (audit remediation ROUND 2,
+# 2026-08-30): the mode → allowed-roles mapping, FROZEN as literals.
+# Deliberately DUPLICATED from ``passes/document_selection`` (whose
+# ``SUPPORTED_MODES``/``TELEGRAPHIC_ENTRY_ROLE`` carry the identical
+# values): renderers MUST NOT import passes (design D5) and no frozen
+# shared home exists (``pipeline_types.py`` is a frozen Phase-1 unit;
+# core is frozen) — the same deliberate-duplication pattern as the
+# linter's ``LINTER_CANONICAL_BREAKING_CHARACTERS``. Parity is pinned
+# TEST-side (tests may import both modules; production may not).
+#
+# This is the renderer's FC-11 boundary: the renderer is the LAST point
+# where ``presentation_role`` exists — the linter only ever sees BYTES —
+# so a role outside the mode's allowed set is validated HERE, before the
+# information is lost, as FC-11's prescribed ``LINT_FAILURE`` (the
+# frozen exit-code table maps the diagnostic CODE, not the emitting
+# stage). A mode absent from this mapping has an EMPTY allowed set:
+# nothing can be validated against an unknown vocabulary, so nothing is
+# accepted (fail-closed; unknown modes were already blocked at
+# selection — defense-in-depth).
+MODE_ALLOWED_PRESENTATION_ROLES: Final[Mapping[str, frozenset[str]]] = (
+    MappingProxyType(
+        {
+            "NURSING_RECORD_TELEGRAPHIC": frozenset({"telegraphic_entry"}),
+        }
+    )
+)
 
 # Explicit FROZEN codepoint set of every character capable of breaking the
 # canonical single-line representation (audit remediation 2026-08-30): C0
@@ -176,11 +221,14 @@ def render_document(
 
     Resolves every entry's ``clinical_fact_ref`` against the
     admissible canonical fact set (the single value authority — the
-    document IR itself never stores values), verifies the entries ↔
-    facts bijection (FC-10 safety net), and emits one deterministic
-    line per fact plus one explicit ``unknown [not_assessed]`` line
-    per contract field with no fact — all sorted by the resolved
-    ``(field_id, clinical_fact_id)`` codepoint key.
+    document IR itself never stores values), validates every entry's
+    ``presentation_role`` against the document mode's allowed set
+    (FC-11 — the last point where the role exists), verifies the
+    entries ↔ facts bijection (FC-10 safety net), and emits one
+    deterministic line per fact plus one explicit
+    ``unknown [not_assessed]`` line per contract field with no fact —
+    all sorted by the resolved ``(field_id, clinical_fact_id)``
+    codepoint key.
 
     Args:
         document: The assembled document IR (refs + presentation
@@ -191,14 +239,41 @@ def render_document(
     Returns:
         A ``StageResult`` admitting a single ``bytes`` document on
         success; on any internal inconsistency the admitted tuple is
-        empty (never a partial document) and every fault is enumerated
-        as a ``RENDER_ERROR`` diagnostic.
+        empty (never a partial document), faults are enumerated as
+        ``RENDER_ERROR`` diagnostics, and a ``presentation_role``
+        outside the mode's allowed set as a ``LINT_FAILURE`` per
+        invalid entry (FC-11).
     """
     diagnostics: list[Diagnostic] = []
     by_id = {fact.clinical_fact_id: fact for fact in facts.facts}
 
+    # FC-11 presentation-role validation (audit remediation ROUND 2,
+    # 2026-08-30): the renderer is the LAST point where an entry's
+    # ``presentation_role`` exists — downstream only the BYTES travel —
+    # so each entry's role is validated against the mode's allowed set
+    # HERE, before the information is lost. A role outside the set is
+    # FC-11's prescribed ``LINT_FAILURE`` per invalid entry (one per
+    # entry, in entry order); an unknown mode carries an EMPTY allowed
+    # set, so every entry fails closed. Emission stays fail-closed: any
+    # diagnostic yields no document.
+    allowed_roles = MODE_ALLOWED_PRESENTATION_ROLES.get(
+        document.document_mode, frozenset()
+    )
+
     referenced: set[str] = set()
     for entry in document.entries:
+        if entry.presentation_role not in allowed_roles:
+            diagnostics.append(
+                Diagnostic(
+                    DiagnosticCode.LINT_FAILURE,
+                    f"document entry for canonical fact"
+                    f" {entry.clinical_fact_ref!r} carries"
+                    f" presentation_role {entry.presentation_role!r}"
+                    " outside the allowed set for document mode"
+                    f" {document.document_mode!r} (FC-11, audit"
+                    " remediation 2026-08-30)",
+                )
+            )
         ref = entry.clinical_fact_ref
         if ref not in by_id:
             diagnostics.append(

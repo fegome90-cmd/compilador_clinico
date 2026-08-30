@@ -43,6 +43,7 @@ from clinical_compiler.core.diagnostics import DiagnosticCode
 from clinical_compiler.core.ir import (
     CanonicalClinicalFact,
     CanonicalClinicalIR,
+    DocumentEntry,
     DocumentIR,
     SourceFactIR,
 )
@@ -56,6 +57,7 @@ from clinical_compiler.passes.input_validation import run_input_validation
 from clinical_compiler.passes.semantic_normalization import (
     run_semantic_normalization,
 )
+from clinical_compiler.pipeline import derive_exit_code
 from clinical_compiler.pipeline_types import StageResult
 from clinical_compiler.renderers.deterministic import render_document
 
@@ -453,3 +455,78 @@ def test_bad_fact_surfaces_diagnostics_and_yields_no_document() -> None:
     assert outcome.rendered is None
     assert outcome.linted is None
     assert outcome.document is None
+
+
+# --- 8. FC-11 at the renderer boundary (audit remediation ROUND 2) ----------
+
+
+def test_injected_document_ir_with_invalid_role_is_lint_failure() -> None:
+    """FC-11 end to end: an injected (test-constructed) ``DocumentIR``
+    whose entry carries a ``presentation_role`` outside the mode's
+    allowed set is rejected AT THE RENDERER BOUNDARY — the last point
+    where the role exists — with ``LINT_FAILURE``, and no document
+    bytes survive. The exit-code table maps that diagnostic set to 10:
+    the CODE drives the exit, never the emitting stage."""
+    data = _feed(
+        _line(_record(fact_id="raw-fc", raw_value=72)),
+        _line(
+            _record(
+                fact_id="raw-ta",
+                field_id="TA",
+                raw_value="120/80",
+            )
+        ),
+    )
+    outcome = _run_chain(data, _deferred_empty_policy())
+    assert outcome.ir is not None
+
+    # The real selection stage always emits the mode's own role; the
+    # injection REPLACES it — role corruption can only be test-built,
+    # exactly the shape the corpus freezes for FC-11.
+    tampered = DocumentIR(
+        document_mode=NURSING_RECORD_TELEGRAPHIC,
+        entries=(
+            DocumentEntry(
+                clinical_fact_ref=outcome.ir.facts[0].clinical_fact_id,
+                presentation_role="INVALID",
+            ),
+            DocumentEntry(
+                clinical_fact_ref=outcome.ir.facts[1].clinical_fact_id,
+                presentation_role="telegraphic_entry",
+            ),
+        ),
+    )
+    rendered = render_document(tampered, outcome.ir)
+    assert rendered.admitted == ()
+    assert tuple(d.code for d in rendered.diagnostics) == (
+        DiagnosticCode.LINT_FAILURE,
+    )
+    assert "INVALID" in rendered.diagnostics[0].message
+
+    # FC-11's prescribed exit code — the diagnostic set maps to 10.
+    assert derive_exit_code(rendered.diagnostics) == 10
+
+
+def test_injected_document_ir_with_wrong_mode_fails_role_validation() -> None:
+    """A ``DocumentIR`` stamped with an unknown mode has NO allowed-role
+    vocabulary — every entry fails closed as ``LINT_FAILURE`` and no
+    document is emitted (defense-in-depth over a corrupted IR)."""
+    data = _feed(_line(_record(fact_id="raw-fc", raw_value=72)))
+    outcome = _run_chain(data, _deferred_empty_policy())
+    assert outcome.ir is not None
+
+    tampered = DocumentIR(
+        document_mode="SOME_OTHER_MODE",
+        entries=(
+            DocumentEntry(
+                clinical_fact_ref=outcome.ir.facts[0].clinical_fact_id,
+                presentation_role="telegraphic_entry",
+            ),
+        ),
+    )
+    rendered = render_document(tampered, outcome.ir)
+    assert rendered.admitted == ()
+    assert tuple(d.code for d in rendered.diagnostics) == (
+        DiagnosticCode.LINT_FAILURE,
+    )
+    assert "SOME_OTHER_MODE" in rendered.diagnostics[0].message

@@ -83,3 +83,11 @@ from the artifacts alone.
 The battery executed PRE-COMMIT on this worktree; byte-identity between battery-tested and
 committed content is provable via `sha256sums.txt` (recorded pre-commit) plus the post-commit
 fence (clean tree, only the documented files).
+
+---
+
+## CORRECTION (appended 2026-08-30, audit remediation ROUND 2 — append-only note)
+
+Wording correction per independent audit §1: this README's opening bullet describes the run's worktree as "(clean DETACHED worktree frozen at the PR head)" and the battery narrative leans on that cleanliness. The precise preflight state was: **tracked source tree clean; the evidence directory itself intentionally untracked** at preflight time (committed only with the remediation commit it documents). The statement "clean tree / no untracked files" would be FALSE for this run and must not be propagated into future evidence write-ups. The underlying facts (worktree frozen at `cec43d3`, zero modified tracked files, main tree never touched) are unaffected.
+
+Appended at 2026-08-30T11:59:50Z by the ROUND 2 remediation run.

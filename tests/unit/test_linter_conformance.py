@@ -38,8 +38,14 @@ from clinical_compiler.core.types import (
     Missingness,
     Provenance,
 )
-from clinical_compiler.linter.conformance import lint_conformance
+from clinical_compiler.linter.conformance import (
+    LINTER_CANONICAL_BREAKING_CHARACTERS,
+    lint_conformance,
+)
 from clinical_compiler.pipeline_types import StageResult
+from clinical_compiler.renderers.deterministic import (
+    CANONICAL_BREAKING_CHARACTERS as RENDERER_CANONICAL_BREAKING_CHARACTERS,
+)
 from clinical_compiler.renderers.deterministic import render_document
 
 MODE = "NURSING_RECORD_TELEGRAPHIC"
@@ -527,7 +533,12 @@ def test_assessed_lines_without_provenance_fail(line: bytes) -> None:
         b"TA: missing [missing] [lab ]\n",
         b"TA: not_applicable [not_applicable] [monitor ]\n",
         b"FC: 72 [present] [monitor   ]\n",
-        b"TA: 120/80 [present] [clinical_note \t]\n",
+        # NBSP U+00A0 (UTF-8 0xC2 0xA0) as the whole ref: whitespace-only
+        # per str.strip(), NOT a member of the canonical-breaking set —
+        # so exactly the empty-ref rule fires (canonical-breaking forms
+        # of whitespace-only refs are the parity rule's cases, e.g. TAB
+        # in a ref).
+        b"TA: 120/80 [present] [clinical_note \xc2\xa0]\n",
     ],
 )
 def test_empty_source_ref_yields_lint_failure(line: bytes) -> None:
@@ -535,9 +546,14 @@ def test_empty_source_ref_yields_lint_failure(line: bytes) -> None:
     present/missing/not_applicable marker MUST carry NON-EMPTY
     provenance — ``[monitor ]`` (empty ref) or a whitespace-only ref is
     provenance in name only, and is rejected as ``LINT_FAILURE``.
-    Defense-in-depth only: the pipeline already rejects empty refs at
-    the frozen contract (7d08951); these bytes are hand-injected past
-    the pipeline to exercise the byte-level net directly."""
+
+    Defense-in-depth reachability, stated precisely (audit round 2
+    wording correction): the frozen contract rejects only the EMPTY
+    string ref (``""`` → INPUT_CONTRACT_ERROR, 7d08951); a
+    WHITESPACE-ONLY ref (``" "``) is contract-ADMISSIBLE and flows
+    through the real pipeline today — this byte-level rule is the only
+    net that rejects it. These bytes are hand-injected past the render
+    stage to exercise the net directly."""
     result = _lint(line)
     assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
     assert "source_ref" in result.diagnostics[0].message
@@ -572,6 +588,184 @@ def test_not_assessed_lines_remain_the_only_provenance_less_form() -> None:
     result = _lint(b"TA: unknown [not_assessed]\n")
     assert result.diagnostics == ()
     assert result.admitted == (b"TA: unknown [not_assessed]\n",)
+
+
+# --- Audit remediation ROUND 2 (2026-08-30): canonical-character parity ---------
+
+# The linter's own frozen net over the canonical-breaking alphabet
+# (BLOCKER 1, independent audit round 2): bytes the renderer refuses to
+# produce must never lint clean. The set is deliberately DUPLICATED into
+# the linter — importing the renderer's constant would let a renderer bug
+# validate itself — so these tests pin the duplication by importing BOTH
+# constants (tests may; production may not) and asserting parity.
+
+
+def test_linter_canonical_breaking_charset_is_explicit_frozen_and_complete() -> None:
+    """The linter's canonical-breaking set is an EXPLICIT FROZEN
+    codepoint set — C0 controls U+0000–U+001F, DEL U+007F, C1 controls
+    U+0080–U+009F (incl. NEL U+0085), LINE SEPARATOR U+2028, PARAGRAPH
+    SEPARATOR U+2029 — 67 characters, frozen as a module constant with
+    no ``unicodedata`` dependency. Shrinking or growing the set fails
+    here (mutation-sensitive completeness pin)."""
+    assert isinstance(LINTER_CANONICAL_BREAKING_CHARACTERS, frozenset)
+    expected_ords = (
+        tuple(range(0x0020))  # C0 U+0000–U+001F
+        + (0x007F,)
+        + tuple(range(0x0080, 0x00A0))  # C1 U+0080–U+009F
+        + (0x2028, 0x2029)
+    )
+    assert len(LINTER_CANONICAL_BREAKING_CHARACTERS) == len(expected_ords) == 67
+    for codepoint in expected_ords:
+        assert chr(codepoint) in LINTER_CANONICAL_BREAKING_CHARACTERS
+
+
+def test_linter_charset_parity_with_the_renderer_frozen_set() -> None:
+    """Cross-pin (TEST-side import — production nets stay independent):
+    the linter's duplicated set is VALUE-IDENTICAL to the renderer's
+    frozen ``CANONICAL_BREAKING_CHARACTERS`` — every character the
+    renderer refuses to render, the linter refuses to accept, and vice
+    versa. Drift in either constant fails here."""
+    assert LINTER_CANONICAL_BREAKING_CHARACTERS == (
+        RENDERER_CANONICAL_BREAKING_CHARACTERS
+    )
+
+
+def _injected_value_bytes(character: str) -> bytes:
+    """A grammar-valid FC line with ``character`` inside the value glyph.
+
+    The renderer declares such bytes impossible (the same character in a
+    verbatim value is RENDER_ERROR), so these are hand-injected past the
+    render stage to exercise the byte-level net directly."""
+    return f"FC: 72{character}bpm [present] [monitor m-1]\n".encode()
+
+
+@pytest.mark.parametrize(
+    "character",
+    sorted(LINTER_CANONICAL_BREAKING_CHARACTERS),
+    ids=lambda character: f"U+{ord(character):04X}",
+)
+def test_every_canonical_breaking_character_in_bytes_yields_lint_failure(
+    character: str,
+) -> None:
+    """Completeness pin over the WHOLE frozen set: rendered bytes
+    carrying the character (in the value glyph position) are a
+    ``LINT_FAILURE`` and are never accepted — for U+000A the injected
+    line splits and the existing grammar/one-line-per-field rules block
+    it, for U+000D the global LF-only invariant blocks it, and for every
+    other character the dedicated parity rule does. Removing the check
+    or shrinking the set fails at least one case."""
+    result = _lint(_injected_value_bytes(character))
+    assert _codes(result)
+    assert set(_codes(result)) == {DiagnosticCode.LINT_FAILURE}
+    assert result.admitted == ()
+
+
+@pytest.mark.parametrize(
+    "character",
+    sorted(LINTER_CANONICAL_BREAKING_CHARACTERS - {"\n", "\r"}),
+    ids=lambda character: f"U+{ord(character):04X}",
+)
+def test_canonical_breaking_character_is_named_with_codepoint_in_line_order(
+    character: str,
+) -> None:
+    """Every character the parity rule itself polices (U+000A cannot
+    appear inside a decoded line — it IS the line separator — and
+    U+000D keeps its dedicated global LF-only message, preserving the
+    existing enumeration order) yields exactly ONE ``LINT_FAILURE`` on
+    line 1 naming the exact ``U+XXXX`` — deterministic message, line
+    order."""
+    result = _lint(_injected_value_bytes(character))
+    messages = _messages(result)
+    assert messages == [
+        (
+            f"line 1: contains canonical-breaking character"
+            f" U+{ord(character):04X} — no canonical single-line"
+            " rendering exists for a document line (canonical-char"
+            " parity, audit remediation 2026-08-30)"
+        )
+    ]
+    assert result.admitted == ()
+
+
+def test_tab_in_value_glyph_yields_lint_failure() -> None:
+    """Auditor example: TAB inside a value glyph — mid-line, so the
+    trailing-whitespace rule never sees it — is a ``LINT_FAILURE``."""
+    result = _lint(b"FC: 72\tbpm [present] [monitor m-1]\n")
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "U+0009" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_tab_in_source_ref_yields_lint_failure() -> None:
+    """Auditor example: TAB inside the provenance ``source_ref`` — the
+    grammar's ``.*`` ref group accepts it — is a ``LINT_FAILURE``."""
+    result = _lint(b"FC: 72 [present] [monitor m\t1]\n")
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "U+0009" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_c1_control_in_source_ref_yields_lint_failure() -> None:
+    """Auditor example: NEL U+0085 (a C1 control, an invisible line
+    break in most viewers) inside the ``source_ref`` is a
+    ``LINT_FAILURE``. The document carries U+0085 UTF-8-encoded
+    (``0xC2 0x85``) — a lone ``0x85`` byte would trip the decodability
+    invariant instead."""
+    result = _lint("FC: 72 [present] [monitor m\x851]\n".encode())
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "U+0085" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_line_separator_in_value_yields_lint_failure() -> None:
+    """Auditor example: LINE SEPARATOR U+2028 inside a value glyph —
+    fabricates a second VISUAL line inside one physical line — is a
+    ``LINT_FAILURE``."""
+    result = _lint("FC: 72\u2028bpm [present] [monitor m-1]\n".encode("utf-8"))
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "U+2028" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_canonical_breaking_violations_are_deterministic() -> None:
+    """Identical canonical-breaking bytes lint to byte-identical
+    diagnostics (determinism pin for the new rule)."""
+    document = b"FC: 72\tbpm [present] [monitor m-1]\nTA: 120\x0b/80 [present] [clinical_note n-1]\n"
+    first = _lint(document)
+    second = _lint(document)
+    assert first.diagnostics == second.diagnostics
+    messages = _messages(first)
+    assert len(messages) == 2
+    assert "line 1" in messages[0] and "U+0009" in messages[0]
+    assert "line 2" in messages[1] and "U+000B" in messages[1]
+    assert first.admitted == ()
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["120/80 mmHg — reposo", "36.6 °C", "café ñ", "72 bpm (stable)", "🩺 ok"],
+)
+def test_printable_unicode_values_still_lint_clean(value: str) -> None:
+    """Boundary (no over-blocking): printable ASCII and typical clinical
+    unicode — accents, degree sign, em dash, emoji-class characters —
+    lint clean; the parity set is an exact codepoint set, never a
+    category approximation."""
+    fact = _canonical_fact(value=_clinical_value(value=value))
+    document = _rendered((fact,))
+    assert _lint(document).diagnostics == ()
+
+
+@pytest.mark.parametrize("ref", ["n-1", "nota-ñ-1", "lab/2026/08/29", "m-9 (rev 2)"])
+def test_printable_source_refs_still_lint_clean(ref: str) -> None:
+    """Boundary (no over-blocking): printable ``source_ref`` strings
+    carry their provenance segment and lint clean."""
+    fact = _canonical_fact(
+        value=_clinical_value(
+            provenance=Provenance(source_kind="monitor", source_ref=ref)
+        ),
+    )
+    document = _rendered((fact,))
+    assert _lint(document).diagnostics == ()
 
 
 # --- Unknown mode (fail-closed) --------------------------------------------------

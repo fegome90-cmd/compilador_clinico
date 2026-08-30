@@ -25,11 +25,27 @@ linter performs no I/O and never re-renders anything.
   rule set is exactly the frozen mode rules plus the P0-1 hardening —
   no rule the renderer cannot produce cleanly, no weakening of the
   frozen invariants.
+- Canonical-character parity (audit remediation ROUND 2, 2026-08-30):
+  the renderer refuses to render ANY character of its frozen 67-codepoint
+  ``CANONICAL_BREAKING_CHARACTERS`` set (C0 U+0000–U+001F, DEL U+007F,
+  C1 U+0080–U+009F, U+2028, U+2029) in a value glyph or a
+  ``source_ref`` — so rendered bytes containing any of them are
+  impossible by construction and must lint as ``LINT_FAILURE``. The
+  set is DUPLICATED here as :data:`LINTER_CANONICAL_BREAKING_CHARACTERS`
+  (own constant, own module — an independent net never imports the
+  renderer it polices); parity is pinned TEST-side. Only U+000A (the
+  line separator itself, structurally excluded from a decoded line)
+  and U+000D (dedicated global LF-only invariant) have their own
+  coverage; every other character of the set fails the per-line scan
+  with a deterministic ``U+XXXX`` message in line order.
 - Frozen rule set (task 3.4 + design Determinism Mechanism #3 +
   P3-U2's frozen glyph vocabulary, to be committed by the first golden
   file at task 3.7):
   1. Byte invariants — UTF-8 decodable; LF-only (no ``CR`` byte);
      no trailing whitespace on any line; exactly one final newline.
+  1b. Canonical-character parity — no decoded line contains any
+     character of the frozen canonical-breaking set (audit
+     remediation ROUND 2, 2026-08-30).
   2. Line grammar — every line matches
      ``{field}: {glyph} [{missingness}] [{source_kind} {source_ref}]``
      with the provenance segment REQUIRED on every assessed line and
@@ -80,7 +96,8 @@ linter performs no I/O and never re-renders anything.
 Determinism (design Determinism Mechanism): no time/locale/random/
 env dependence; checks run in a fixed order (mode, byte invariants,
 then lines ascending — within a line: trailing whitespace, grammar,
-vocabulary, provenance-segment non-emptiness; after each line: the
+vocabulary, provenance-segment non-emptiness, canonical-breaking-
+character parity LAST; after each line: the
 cross-line one-line-per-field rule)
 so identical bytes yield byte-identical diagnostics.
 This stage never imports ``pipeline`` or ``passes`` (D5); its stage
@@ -97,12 +114,37 @@ from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
 from clinical_compiler.core.types import Missingness
 from clinical_compiler.pipeline_types import StageResult
 
-__all__ = ["lint_conformance"]
+__all__ = ["LINTER_CANONICAL_BREAKING_CHARACTERS", "lint_conformance"]
 
 _NURSING_RECORD_TELEGRAPHIC: Final[str] = "NURSING_RECORD_TELEGRAPHIC"
 _SUPPORTED_MODES: Final[tuple[str, ...]] = (_NURSING_RECORD_TELEGRAPHIC,)
 
 _UNASSESSED_GLYPH: Final[str] = "unknown"
+
+# Canonical-breaking character parity net (audit remediation ROUND 2,
+# 2026-08-30): the EXPLICIT FROZEN 67-codepoint set of every character
+# the renderer refuses to place in the canonical bytes — C0 controls
+# U+0000–U+001F, DEL U+007F, C1 controls U+0080–U+009F (incl. NEL
+# U+0085), LINE SEPARATOR U+2028, PARAGRAPH SEPARATOR U+2029. Frozen as
+# literal codepoints — deliberately NOT derived from ``unicodedata``
+# (whose tables vary across Python versions) — so identical bytes lint
+# identically on every interpreter. Deliberately DUPLICATED from the
+# renderer's ``CANONICAL_BREAKING_CHARACTERS`` (same 67 codepoints,
+# different constant, different module): the linter is an INDEPENDENT
+# net AFTER render — importing renderer internals would let a renderer
+# bug validate itself (the established duplication pattern, like the
+# glyph vocabulary below). Parity is pinned TEST-side (tests may import
+# both constants; production may not — D5).
+_FORBIDDEN_LINE_CODEPOINT_ORDS: Final[tuple[int, ...]] = (
+    *range(0x0020),  # C0 controls U+0000–U+001F
+    0x007F,
+    *range(0x0080, 0x00A0),  # C1 controls U+0080–U+009F
+    0x2028,
+    0x2029,
+)
+LINTER_CANONICAL_BREAKING_CHARACTERS: Final[frozenset[str]] = frozenset(
+    chr(codepoint) for codepoint in _FORBIDDEN_LINE_CODEPOINT_ORDS
+)
 
 # Glyph/missingness consistency table (the renderer's frozen vocabulary,
 # duplicated on purpose — see module docstring). PRESENT is absent: its
@@ -133,12 +175,14 @@ _LINE_RE: Final[re.Pattern[str]] = re.compile(
 def _check_line(line: str, number: int) -> tuple[list[Diagnostic], str | None]:
     """Lint one decoded line, enumerating every rule it violates.
 
-    Checks run in a fixed order — trailing whitespace, then the line
-    grammar and its vocabulary/consistency rules — so identical lines
-    yield identical diagnostics in identical order. Returns the
-    diagnostics plus the line's field token (``None`` when the grammar
-    does not match) so the caller can enforce the cross-line
-    one-line-per-field rule.
+    Checks run in a fixed order — trailing whitespace, the line grammar
+    and its vocabulary/consistency/provenance rules, then the
+    canonical-breaking-character parity scan LAST — so identical lines
+    yield identical diagnostics in identical order and every
+    pre-existing enumeration is preserved byte-for-byte (the parity
+    rule only ever APPENDS). Returns the diagnostics plus the line's
+    field token (``None`` when the grammar does not match) so the
+    caller can enforce the cross-line one-line-per-field rule.
     """
     diagnostics: list[Diagnostic] = []
 
@@ -219,6 +263,40 @@ def _check_line(line: str, number: int) -> tuple[list[Diagnostic], str | None]:
                 f"line {number}: provenance source_ref is empty or"
                 " whitespace-only — an assessed line must carry"
                 " non-empty provenance (audit remediation 2026-08-30)",
+            )
+        )
+
+    # Canonical-breaking-character parity (audit remediation ROUND 2,
+    # 2026-08-30): any character of the frozen set inside a decoded
+    # line means the bytes could not have come from the renderer — it
+    # refuses every such character (RENDER_ERROR) in values AND
+    # source_refs — so the line is linted as the injection residue it
+    # is. U+000A is skipped: it IS the line separator and can never
+    # appear inside a decoded line (the split-line fragments it yields
+    # are blocked by the grammar and one-line-per-field rules). U+000D
+    # is skipped here only because it keeps its dedicated global
+    # LF-only invariant in :func:`lint_conformance` — a per-line CR
+    # diagnostic would double-enumerate and disturb the frozen
+    # enumeration order. The scan runs LAST within a line (fixed
+    # order, documented in the docstring) and names the FIRST
+    # (leftmost) violating character — identical lines name identical
+    # codepoints.
+    breaker = None
+    for character in line:
+        if character in LINTER_CANONICAL_BREAKING_CHARACTERS and character not in (
+            "\n",
+            "\r",
+        ):
+            breaker = character
+            break
+    if breaker is not None:
+        diagnostics.append(
+            Diagnostic(
+                DiagnosticCode.LINT_FAILURE,
+                f"line {number}: contains canonical-breaking character"
+                f" U+{ord(breaker):04X} — no canonical single-line"
+                " rendering exists for a document line (canonical-char"
+                " parity, audit remediation 2026-08-30)",
             )
         )
 

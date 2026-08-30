@@ -15,6 +15,7 @@ dangling-ref safety net's reference point.
 """
 
 import hashlib
+from collections.abc import Mapping
 from typing import cast
 
 import pytest
@@ -32,9 +33,20 @@ from clinical_compiler.core.types import (
     Missingness,
     Provenance,
 )
+from clinical_compiler.passes.document_selection import (
+    NURSING_RECORD_TELEGRAPHIC as SELECTION_NURSING_RECORD_TELEGRAPHIC,
+)
+from clinical_compiler.passes.document_selection import (
+    SUPPORTED_MODES as SELECTION_SUPPORTED_MODES,
+)
+from clinical_compiler.passes.document_selection import (
+    TELEGRAPHIC_ENTRY_ROLE as SELECTION_TELEGRAPHIC_ENTRY_ROLE,
+)
+from clinical_compiler.pipeline import derive_exit_code
 from clinical_compiler.pipeline_types import StageResult
 from clinical_compiler.renderers.deterministic import (
     CANONICAL_BREAKING_CHARACTERS,
+    MODE_ALLOWED_PRESENTATION_ROLES,
     render_document,
 )
 
@@ -523,6 +535,121 @@ def test_multiple_inconsistencies_are_all_enumerated() -> None:
         DiagnosticCode.RENDER_ERROR,
     )
     assert result.admitted == ()
+
+
+# --- Audit remediation ROUND 2 (2026-08-30): FC-11 presentation_role -----------
+
+# FC-11's renderer boundary (independent audit round 2): the renderer is
+# the LAST point where ``presentation_role`` exists — it validates each
+# entry's role against the mode's allowed set BEFORE the role is lost
+# (the linter only ever sees bytes). A role outside the allowed set is
+# FC-11's prescribed ``LINT_FAILURE`` (the exit-code table maps the
+# diagnostic CODE, not the emitting stage), fail-closed, one diagnostic
+# per invalid entry. The mode→roles vocabulary is deliberately
+# DUPLICATED from ``passes/document_selection`` (renderers must not
+# import passes — D5); parity is pinned TEST-side here, where importing
+# both is legitimate.
+
+# Test-side parity witness: tests may import passes AND renderers; the
+# production modules may not import each other (D5).
+
+def test_renderer_role_vocabulary_parity_with_document_selection() -> None:
+    """Cross-pin (TEST-side import): the renderer's duplicated
+    mode→allowed-roles mapping is VALUE-IDENTICAL to the frozen
+    selection vocabulary — every supported mode is covered, and the
+    telegraphic mode's only allowed role is the selection stage's
+    ``telegraphic_entry``. Drift in either constant fails here."""
+    assert isinstance(MODE_ALLOWED_PRESENTATION_ROLES, Mapping)
+    assert set(MODE_ALLOWED_PRESENTATION_ROLES) == set(SELECTION_SUPPORTED_MODES)
+    assert MODE_ALLOWED_PRESENTATION_ROLES[SELECTION_NURSING_RECORD_TELEGRAPHIC] == (
+        frozenset({SELECTION_TELEGRAPHIC_ENTRY_ROLE})
+    )
+
+
+@pytest.mark.parametrize("role", ["INVALID", "", "narrative_entry"])
+def test_presentation_role_outside_the_allowed_set_is_lint_failure(
+    role: str,
+) -> None:
+    """FC-11: an entry whose ``presentation_role`` is outside the
+    document mode's allowed set → ``LINT_FAILURE`` (NOT RENDER_ERROR —
+    the corpus freezes the code), NO partial document, and a
+    deterministic message naming the offending role and the mode."""
+    facts = (_fc_fact(), _canonical_fact())
+    entries = (
+        DocumentEntry(clinical_fact_ref="c-fc-1", presentation_role=role),
+        DocumentEntry(clinical_fact_ref="c-ta-1", presentation_role=ROLE),
+    )
+    result = _render(facts, entries=entries)
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert result.admitted == ()
+    assert role in result.diagnostics[0].message
+    assert MODE in result.diagnostics[0].message
+
+
+def test_invalid_role_is_enumerated_per_entry_without_blocking_others_names() -> None:
+    """D1 + determinism: two invalid roles enumerate exactly one
+    ``LINT_FAILURE`` each, in entry order, each naming ITS entry's
+    ref; a valid role between them emits nothing."""
+    facts = (_fc_fact(), _canonical_fact())
+    entries = (
+        DocumentEntry(clinical_fact_ref="c-fc-1", presentation_role="bogus_a"),
+        DocumentEntry(clinical_fact_ref="c-ta-1", presentation_role=ROLE),
+    )
+    single = _render(facts, entries=entries)
+    assert [_codes(single)] == [(DiagnosticCode.LINT_FAILURE,)]
+    assert "c-fc-1" in single.diagnostics[0].message
+
+    both = _render(
+        facts,
+        entries=(
+            DocumentEntry(clinical_fact_ref="c-ta-1", presentation_role="bogus_b"),
+            DocumentEntry(clinical_fact_ref="c-fc-1", presentation_role="bogus_a"),
+        ),
+    )
+    assert _codes(both) == (
+        DiagnosticCode.LINT_FAILURE,
+        DiagnosticCode.LINT_FAILURE,
+    )
+    assert "c-ta-1" in both.diagnostics[0].message
+    assert "c-fc-1" in both.diagnostics[1].message
+    assert both.admitted == ()
+
+
+def test_document_entries_with_valid_role_render_unchanged() -> None:
+    """Valid roles are unaffected: the mode's own role renders exactly
+    as before the FC-11 hardening (golden bytes pinned)."""
+    result = _render((_fc_fact(), _canonical_fact()))
+    assert result.diagnostics == ()
+    assert result.admitted[0] == (
+        b"FC: 72 [present] [monitor m-9]\nTA: 120/80 [present] [clinical_note n-1]\n"
+    )
+
+
+def test_unknown_document_mode_has_no_allowed_roles_and_fails_closed() -> None:
+    """An unknown mode carries NO allowed-role vocabulary — every entry
+    fails closed as ``LINT_FAILURE`` (defense-in-depth: selection
+    already blocks unknown modes; the renderer never trusts that)."""
+    facts = (_fc_fact(),)
+    entries = _entries(facts)
+    document = DocumentIR(document_mode="SOME_OTHER_MODE", entries=entries)
+    result = render_document(document, CanonicalClinicalIR(facts=facts))
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert result.admitted == ()
+    assert "SOME_OTHER_MODE" in result.diagnostics[0].message
+
+
+def test_fc11_role_diagnostic_maps_to_exit_ten() -> None:
+    """FC-11's prescribed exit: the role diagnostic is a
+    ``LINT_FAILURE`` regardless of its emitting stage, and the frozen
+    exit-code table maps that code to 10 — the diagnostic SET drives
+    the exit code, never the stage that emitted it."""
+    facts = (_fc_fact(),)
+    entries = (
+        DocumentEntry(clinical_fact_ref="c-fc-1", presentation_role="INVALID"),
+    )
+    result = _render(facts, entries=entries)
+    exit_code = derive_exit_code(result.diagnostics)
+    assert exit_code == 10
 
 
 # --- Empty-entries edge ---------------------------------------------------------
