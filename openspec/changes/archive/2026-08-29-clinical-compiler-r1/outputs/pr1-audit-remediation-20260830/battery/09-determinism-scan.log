@@ -1,0 +1,32 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:48Z
+description: Determinism scan: zero datetime/locale/random/hash( call sites in output paths; new frozen charset adds none
+command: /tmp/pr1-audit-remed-scratch/detscan.sh 
+--- exit_code: 0
+--- stdout ---
+### raw scan: datetime|locale|random|hash( in src
+src/clinical_compiler/pipeline.py:65:globals mutated, no time/locale/random/env in any output path.
+src/clinical_compiler/cli.py:48:network, no subprocess/shell, no eval/exec, no time/locale/random in any
+src/clinical_compiler/passes/document_selection.py:44:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/passes/semantic_normalization.py:49:``fact_id`` set (stdlib ``hashlib``/``json`` only; never random, uuid,
+src/clinical_compiler/linter/conformance.py:80:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/renderers/deterministic.py:69:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/renderers/deterministic.py:145:    (locale-free, never locale ``format()``); strings verbatim — but a
+
+### call-site scan: assignments/calls that would COMPUTE at runtime in output paths
+(no call sites — all hits above are docstrings/comments/identifier substrings)
+
+### hashlib usage (allowed: stdlib sha256 for deterministic ids — confirm each site)
+src/clinical_compiler/passes/semantic_normalization.py:49:``fact_id`` set (stdlib ``hashlib``/``json`` only; never random, uuid,
+src/clinical_compiler/passes/semantic_normalization.py:60:import hashlib
+src/clinical_compiler/passes/semantic_normalization.py:94:    digest = hashlib.sha256(preimage.encode("utf-8")).hexdigest()
+
+### NEW in this remediation: the frozen codepoint set adds NO datetime/locale/random/hash calls
+40:  frozen as literal codepoints (no ``unicodedata`` runtime
+69:Determinism (design Determinism Mechanism): no time/locale/random/
+94:# from ``unicodedata`` (whose tables vary across Python versions) — so
+145:    (locale-free, never locale ``format()``); strings verbatim — but a
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:48Z

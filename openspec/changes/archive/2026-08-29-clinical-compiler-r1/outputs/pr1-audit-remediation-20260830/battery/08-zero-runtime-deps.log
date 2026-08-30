@@ -1,0 +1,127 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:48Z
+description: Zero runtime dependencies (pyproject [project].dependencies absent; stdlib-only imports)
+command: /tmp/pr1-audit-remed-scratch/zero_deps.sh 
+--- exit_code: 0
+--- stdout ---
+### [project] table in pyproject.toml (dependencies key absent = zero runtime deps)
+5:[project]
+16:    "pytest>=9.1.1",
+17:    "pytest-cov>=6.0",
+18:    "ruff>=0.16.5",
+19:    "mypy>=2.3.1",
+
+### dependency-groups (dev-only tooling)
+14:[dependency-groups]
+15-dev = [
+16-    "pytest>=9.1.1",
+17-    "pytest-cov>=6.0",
+18-    "ruff>=0.16.5",
+19-    "mypy>=2.3.1",
+20-]
+21-
+22-[tool.setuptools.packages.find]
+23-where = ["src"]
+24-
+25-[tool.setuptools.package-data]
+26-clinical_compiler = ["py.typed"]
+
+### all src imports (must be stdlib + clinical_compiler only)
+src/clinical_compiler/pipeline.py:68:from dataclasses import dataclass
+src/clinical_compiler/pipeline.py:69:from typing import Final
+src/clinical_compiler/pipeline.py:71:from clinical_compiler.adapters.seed import PolicyResolution
+src/clinical_compiler/pipeline.py:72:from clinical_compiler.adapters.structured_feed import parse_feed
+src/clinical_compiler/pipeline.py:73:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/pipeline.py:74:from clinical_compiler.core.ir import CanonicalClinicalIR, SourceFactIR
+src/clinical_compiler/pipeline.py:75:from clinical_compiler.core.types import Certainty
+src/clinical_compiler/pipeline.py:76:from clinical_compiler.linter.conformance import lint_conformance
+src/clinical_compiler/pipeline.py:77:from clinical_compiler.passes.admissibility import run_admissibility
+src/clinical_compiler/pipeline.py:78:from clinical_compiler.passes.document_selection import run_document_selection
+src/clinical_compiler/pipeline.py:79:from clinical_compiler.passes.input_validation import run_input_validation
+src/clinical_compiler/pipeline.py:80:from clinical_compiler.passes.semantic_normalization import (
+src/clinical_compiler/pipeline.py:83:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/pipeline.py:84:from clinical_compiler.renderers.deterministic import render_document
+src/clinical_compiler/cli.py:54:import argparse
+src/clinical_compiler/cli.py:55:import os
+src/clinical_compiler/cli.py:56:import sys
+src/clinical_compiler/cli.py:57:import tempfile
+src/clinical_compiler/cli.py:58:from collections.abc import Sequence
+src/clinical_compiler/cli.py:59:from pathlib import Path
+src/clinical_compiler/cli.py:60:from typing import Final, NoReturn, cast
+src/clinical_compiler/cli.py:62:from clinical_compiler.adapters.seed import (
+src/clinical_compiler/cli.py:68:from clinical_compiler.core.diagnostics import Diagnostic
+src/clinical_compiler/cli.py:69:from clinical_compiler.passes.document_selection import (
+src/clinical_compiler/cli.py:72:from clinical_compiler.passes.document_selection import SUPPORTED_MODES
+src/clinical_compiler/cli.py:73:from clinical_compiler.pipeline import (
+src/clinical_compiler/adapters/contract.py:26:from collections.abc import Mapping
+src/clinical_compiler/adapters/contract.py:27:from dataclasses import dataclass
+src/clinical_compiler/adapters/contract.py:28:from types import MappingProxyType
+src/clinical_compiler/adapters/contract.py:29:from typing import Final, cast
+src/clinical_compiler/adapters/contract.py:31:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/adapters/contract.py:32:from clinical_compiler.core.ir import SourceFactIR
+src/clinical_compiler/adapters/contract.py:33:from clinical_compiler.core.types import Certainty, Provenance
+src/clinical_compiler/adapters/seed.py:70:import json
+src/clinical_compiler/adapters/seed.py:71:from dataclasses import dataclass
+src/clinical_compiler/adapters/seed.py:72:from enum import StrEnum
+src/clinical_compiler/adapters/seed.py:73:from pathlib import Path
+src/clinical_compiler/adapters/seed.py:74:from typing import Final
+src/clinical_compiler/adapters/structured_feed.py:30:import json
+src/clinical_compiler/adapters/structured_feed.py:31:from dataclasses import dataclass
+src/clinical_compiler/adapters/structured_feed.py:33:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/adapters/structured_feed.py:35:from .contract import ContractEvaluation, map_record
+src/clinical_compiler/__init__.py:3:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/passes/document_selection.py:63:import passes; units 2-3 face the same placement question.
+src/clinical_compiler/passes/document_selection.py:66:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/passes/document_selection.py:67:from clinical_compiler.core.ir import (
+src/clinical_compiler/passes/document_selection.py:72:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/passes/admissibility.py:64:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/passes/admissibility.py:65:from clinical_compiler.core.ir import CanonicalClinicalFact
+src/clinical_compiler/passes/admissibility.py:66:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/passes/input_validation.py:25:from clinical_compiler.adapters.contract import ALLOWED_SOURCE_KINDS, CONTRACT
+src/clinical_compiler/passes/input_validation.py:26:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/passes/input_validation.py:27:from clinical_compiler.core.ir import SourceFactIR
+src/clinical_compiler/passes/input_validation.py:28:from clinical_compiler.core.types import Provenance
+src/clinical_compiler/passes/input_validation.py:29:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/passes/semantic_normalization.py:60:import hashlib
+src/clinical_compiler/passes/semantic_normalization.py:61:import json
+src/clinical_compiler/passes/semantic_normalization.py:63:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/passes/semantic_normalization.py:64:from clinical_compiler.core.ir import CanonicalClinicalFact, SourceFactIR
+src/clinical_compiler/passes/semantic_normalization.py:65:from clinical_compiler.core.types import Certainty, ClinicalValue, Missingness
+src/clinical_compiler/passes/semantic_normalization.py:66:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/linter/conformance.py:90:import re
+src/clinical_compiler/linter/conformance.py:91:from collections.abc import Mapping
+src/clinical_compiler/linter/conformance.py:92:from types import MappingProxyType
+src/clinical_compiler/linter/conformance.py:93:from typing import Final
+src/clinical_compiler/linter/conformance.py:95:from clinical_compiler.adapters.contract import ALLOWED_SOURCE_KINDS, CONTRACT
+src/clinical_compiler/linter/conformance.py:96:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/linter/conformance.py:97:from clinical_compiler.core.types import Missingness
+src/clinical_compiler/linter/conformance.py:98:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/core/ir.py:18:from dataclasses import dataclass
+src/clinical_compiler/core/ir.py:20:from .types import Certainty, ClinicalValue, Provenance
+src/clinical_compiler/pipeline_types.py:10:from dataclasses import dataclass
+src/clinical_compiler/pipeline_types.py:11:from typing import Generic, TypeVar
+src/clinical_compiler/pipeline_types.py:13:from clinical_compiler.core.diagnostics import Diagnostic
+src/clinical_compiler/renderers/deterministic.py:77:from typing import Final
+src/clinical_compiler/renderers/deterministic.py:79:from clinical_compiler.adapters.contract import CONTRACT
+src/clinical_compiler/renderers/deterministic.py:80:from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
+src/clinical_compiler/renderers/deterministic.py:81:from clinical_compiler.core.ir import CanonicalClinicalIR, DocumentIR
+src/clinical_compiler/renderers/deterministic.py:82:from clinical_compiler.core.types import ClinicalValue, Missingness
+src/clinical_compiler/renderers/deterministic.py:83:from clinical_compiler.pipeline_types import StageResult
+src/clinical_compiler/core/diagnostics.py:3:from dataclasses import dataclass
+src/clinical_compiler/core/diagnostics.py:4:from enum import StrEnum
+src/clinical_compiler/core/types.py:3:from dataclasses import dataclass
+src/clinical_compiler/core/types.py:4:from enum import StrEnum
+src/clinical_compiler/core/types.py:5:from typing import Any
+
+### uv.lock runtime-deps sanity: clinical-record-compiler package section
+74:name = "clinical-record-compiler"
+75-version = "0.1.0"
+76-source = { editable = "." }
+77-
+78-[package.dev-dependencies]
+79-dev = [
+80-    { name = "mypy" },
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:48Z

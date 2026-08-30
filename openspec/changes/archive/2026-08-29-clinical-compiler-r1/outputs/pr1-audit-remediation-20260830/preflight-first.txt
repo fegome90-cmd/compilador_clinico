@@ -1,0 +1,36 @@
+# preflight-first — PR1 audit remediation run
+# worktree: /Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3
+# expected frozen base SHA: cec43d39212b46b105dae318e6e5ca96627285b3
+# discipline: this file is written IMMEDIATELY after the captures below; every battery log that follows embeds its own UTC timestamp strictly greater than the last TS here, proving freeze-before-battery.
+# note: evidence dir is created before capture but the file itself is written after; git ls-files --others below reflects the tree at capture time.
+
+TS=2026-08-30T10:51:16Z
+$ git rev-parse --show-toplevel
+/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3
+
+TS=2026-08-30T10:51:16Z
+$ git branch --show-current
+[]  (empty = detached HEAD, as expected)
+
+TS=2026-08-30T10:51:16Z
+$ git rev-parse HEAD
+cec43d39212b46b105dae318e6e5ca96627285b3
+
+TS=2026-08-30T10:51:16Z
+$ git status --short
+[?? openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/]  (empty = clean tree)
+
+TS=2026-08-30T10:51:16Z
+$ git diff --stat
+[]  (empty = no unstaged changes)
+
+TS=2026-08-30T10:51:16Z
+$ git diff --name-status
+[]
+
+TS=2026-08-30T10:51:16Z
+$ git ls-files --others --exclude-standard
+[openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/preflight-first.txt]  (empty = no untracked files at capture time)
+
+TS=2026-08-30T10:51:16Z
+END preflight-first

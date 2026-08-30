@@ -38,7 +38,10 @@ linter performs no I/O and never re-renders anything.
      provenance-less assessed line is the injection residue of a
      line-split value; the unassessed line carries no source). Lines
      parse right-anchored, so verbatim value glyphs may themselves
-     contain ``[...]`` segments and ``: ``.
+     contain ``[...]`` segments and ``: ``. A matched provenance
+     segment must additionally carry a NON-EMPTY ``source_ref`` —
+     ``[monitor ]`` (empty or whitespace-only ref; audit remediation
+     2026-08-30) is provenance in name only and is rejected.
   3. Vocabulary tokens — ``field`` within the frozen input contract
      (design D5 explicitly allows linter → adapters.contract);
      ``missingness`` within the ``Missingness`` taxonomy;
@@ -77,7 +80,8 @@ linter performs no I/O and never re-renders anything.
 Determinism (design Determinism Mechanism): no time/locale/random/
 env dependence; checks run in a fixed order (mode, byte invariants,
 then lines ascending — within a line: trailing whitespace, grammar,
-vocabulary; after each line: the cross-line one-line-per-field rule)
+vocabulary, provenance-segment non-emptiness; after each line: the
+cross-line one-line-per-field rule)
 so identical bytes yield byte-identical diagnostics.
 This stage never imports ``pipeline`` or ``passes`` (D5); its stage
 contract comes from :mod:`clinical_compiler.pipeline_types`.
@@ -168,6 +172,7 @@ def _check_line(line: str, number: int) -> tuple[list[Diagnostic], str | None]:
 
     token: str = match.group("missingness")
     source_kind: str | None = match.group("source_kind")
+    source_ref: str | None = match.group("source_ref")
     if token not in _MISSINGNESS_TOKENS:
         diagnostics.append(
             Diagnostic(
@@ -207,6 +212,16 @@ def _check_line(line: str, number: int) -> tuple[list[Diagnostic], str | None]:
             )
         )
 
+    if source_ref is not None and not source_ref.strip():
+        diagnostics.append(
+            Diagnostic(
+                DiagnosticCode.LINT_FAILURE,
+                f"line {number}: provenance source_ref is empty or"
+                " whitespace-only — an assessed line must carry"
+                " non-empty provenance (audit remediation 2026-08-30)",
+            )
+        )
+
     return diagnostics, field
 
 
@@ -216,8 +231,9 @@ def lint_conformance(document: bytes, document_mode: str) -> StageResult[bytes]:
     Runs the frozen rule set over the bytes — byte invariants first
     (exactly one final newline, LF-only, UTF-8 decodable), then every
     line in order (trailing whitespace, line grammar, vocabulary
-    tokens, glyph/missingness consistency, provenance requirement),
-    with the cross-line one-line-per-field rule enforced in line order
+    tokens, glyph/missingness consistency, provenance requirement,
+    provenance-segment non-emptiness), with the cross-line
+    one-line-per-field rule enforced in line order
     — enumerating one ``LINT_FAILURE`` per violated rule (design D1).
 
     Args:

@@ -1,0 +1,17 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:46Z
+description: Determinism: 3 CLI cases x PYTHONHASHSEED 0/12345/random, stdout+stderr byte-compared; golden case also vs committed bytes
+command: /tmp/pr1-audit-remed-scratch/determinism.sh 
+--- exit_code: 0
+--- stdout ---
+case=valid-baseline expected_exit=0 exit_seeds=[0,0,0] stdout_sha(seed0)=62aac281bc9986ddd1a4707cf1d89f3102c8a8dce46cdb188efbaf75c061efd4 bytes=59 -> BYTE-IDENTICAL
+case=p02-both expected_exit=0 exit_seeds=[0,0,0] stdout_sha(seed0)=55eb0bfa087b6922b32c0f675c3ef7f66360eaf44d8c51af22f417e203007b63 bytes=60 -> BYTE-IDENTICAL
+case=golden-standard_mixed expected_exit=0 exit_seeds=[0,0,0] stdout_sha(seed0)=e7b5b03fa6d9f150c081684846fb481b7dfda02ebdd24992a7fba164c88b8abc bytes=68 -> BYTE-IDENTICAL
+
+### golden case byte-identity vs committed document
+golden CLI output == committed document bytes: IDENTICAL
+determinism_overall_exit=0
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:47Z

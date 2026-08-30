@@ -32,7 +32,13 @@ renderer's — the renderer is bytes-out only).
   carrying a line break (LF/CR) would inject a fabricated document
   line or split the provenance segment, so it is refused — verbatim
   values are never rewritten or escaped (input-contract spec), they
-  fail closed.
+  fail closed. Audit remediation (2026-08-30): the closure now covers
+  the FULL explicit frozen set of canonical-breaking characters —
+  C0 controls U+0000–U+001F, DEL U+007F, C1 controls U+0080–U+009F
+  (incl. NEL U+0085), LINE SEPARATOR U+2028, PARAGRAPH SEPARATOR
+  U+2029 — applied to BOTH value glyphs and ``source_ref`` strings,
+  frozen as literal codepoints (no ``unicodedata`` runtime
+  dependency, so the set cannot drift across Python versions).
 - Entry order: ``DocumentEntry`` carries no ``field_id``, so the
   renderer resolves each entry's fact and sorts ALL lines by the
   resolved ``(field_id, clinical_fact_id)`` codepoint key itself — it
@@ -68,15 +74,36 @@ render identical bytes. This stage never imports ``pipeline`` or
 :mod:`clinical_compiler.pipeline_types`.
 """
 
+from typing import Final
+
 from clinical_compiler.adapters.contract import CONTRACT
 from clinical_compiler.core.diagnostics import Diagnostic, DiagnosticCode
 from clinical_compiler.core.ir import CanonicalClinicalIR, DocumentIR
 from clinical_compiler.core.types import ClinicalValue, Missingness
 from clinical_compiler.pipeline_types import StageResult
 
-__all__ = ["render_document"]
+__all__ = ["CANONICAL_BREAKING_CHARACTERS", "render_document"]
 
 _UNASSESSED_GLYPH: str = "unknown"
+
+# Explicit FROZEN codepoint set of every character capable of breaking the
+# canonical single-line representation (audit remediation 2026-08-30): C0
+# controls U+0000–U+001F (incl. TAB/LF/CR), DEL U+007F, C1 controls
+# U+0080–U+009F (incl. NEL U+0085), LINE SEPARATOR U+2028, PARAGRAPH
+# SEPARATOR U+2029. Frozen as literal codepoints — deliberately NOT derived
+# from ``unicodedata`` (whose tables vary across Python versions) — so
+# identical input renders, or fails closed, identically on every
+# interpreter.
+_FORBIDDEN_CODEPOINT_ORDS: Final[tuple[int, ...]] = (
+    *range(0x0020),  # C0 controls U+0000–U+001F
+    0x007F,
+    *range(0x0080, 0x00A0),  # C1 controls U+0080–U+009F
+    0x2028,
+    0x2029,
+)
+CANONICAL_BREAKING_CHARACTERS: Final[frozenset[str]] = frozenset(
+    chr(codepoint) for codepoint in _FORBIDDEN_CODEPOINT_ORDS
+)
 
 
 def _has_line_break(text: str) -> bool:
@@ -89,6 +116,24 @@ def _has_line_break(text: str) -> bool:
     Values are never rewritten or escaped — they fail closed.
     """
     return "\n" in text or "\r" in text
+
+
+def _canonical_breaking_character(text: str) -> str | None:
+    """First character of ``text`` in the frozen canonical-breaking
+    set, or ``None``.
+
+    Complements :func:`_has_line_break`: LF/CR keep their dedicated
+    "line break" fault message, while every other character of the
+    frozen set (TAB, DEL, C1 controls such as NEL U+0085, U+2028/
+    U+2029, ...) fails closed under a deterministic U+XXXX message.
+    Membership is an exact codepoint test against
+    :data:`CANONICAL_BREAKING_CHARACTERS` — no category approximation,
+    so printable unicode (accents, ``°``, ``—``) is never over-blocked.
+    """
+    for character in text:
+        if character in CANONICAL_BREAKING_CHARACTERS:
+            return character
+    return None
 
 
 def _value_glyph(value: ClinicalValue) -> str | None:
@@ -112,6 +157,8 @@ def _value_glyph(value: ClinicalValue) -> str | None:
         raw = value.value
         if type(raw) is str or type(raw) is int or type(raw) is float:
             if type(raw) is str and _has_line_break(raw):
+                return None
+            if type(raw) is str and _canonical_breaking_character(raw):
                 return None
             return str(raw)
         return None
@@ -191,10 +238,22 @@ def render_document(
         if glyph is None:
             value = fact.value.value
             if type(value) is str:
-                detail = (
-                    "contains a line break — no canonical single-line"
-                    " rendering exists for a verbatim value (P0-1)"
+                breaker = (
+                    None
+                    if _has_line_break(value)
+                    else _canonical_breaking_character(value)
                 )
+                if breaker is None:
+                    detail = (
+                        "contains a line break — no canonical single-line"
+                        " rendering exists for a verbatim value (P0-1)"
+                    )
+                else:
+                    detail = (
+                        "contains canonical-breaking character"
+                        f" U+{ord(breaker):04X} — no canonical single-line"
+                        " rendering exists for a verbatim value"
+                    )
             else:
                 detail = "has no canonical rendering"
             diagnostics.append(
@@ -215,6 +274,19 @@ def render_document(
                     f" ({fact.field_id!r}) carries a source_ref"
                     " containing a line break — the provenance segment"
                     " has no canonical single-line rendering (P0-1)",
+                )
+            )
+            continue
+        ref_breaker = _canonical_breaking_character(provenance.source_ref)
+        if ref_breaker is not None:
+            diagnostics.append(
+                Diagnostic(
+                    DiagnosticCode.RENDER_ERROR,
+                    f"canonical fact {fact.clinical_fact_id!r}"
+                    f" ({fact.field_id!r}) carries a source_ref"
+                    " containing canonical-breaking character"
+                    f" U+{ord(ref_breaker):04X} — the provenance segment"
+                    " has no canonical single-line rendering",
                 )
             )
             continue

@@ -1,0 +1,33 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:49Z
+description: Document/diagnostics non-coexistence re-verified live (construction guard + behavioral tests)
+command: /tmp/pr1-audit-remed-scratch/noncoexist.sh 
+--- exit_code: 0
+--- stdout ---
+### [code] construction-unrepresentable: CompileResult.__post_init__ guard
+171:    def __post_init__(self) -> None:
+172-        if self.document is not None and self.diagnostics:
+173-            raise ValueError(
+174-                "CompileResult carries a document AND diagnostics —"
+175-                " emission is fail-closed: any diagnostic blocks the"
+176-                " document"
+177-            )
+178-        if self.document is None and not self.diagnostics and self.policy.is_resolved:
+179-            raise ValueError(
+180-                "CompileResult carries neither document nor"
+181-                " diagnostics under a RESOLVED policy — a clean run"
+182-                " emits its document; an empty outcome exists only"
+183-                " under UNRESOLVED_POLICY"
+
+### [live re-verification: construction unrepresentability]
+live: doc+diagnostics construction raised ValueError: CompileResult carries a document AND diagnostics — emission is fail-cl ...
+live: silent-empty-under-resolved raised ValueError: CompileResult carries neither document nor diagnostics under a RESOLVE ...
+live: legal outcome (document, no diagnostics) constructs fine
+
+### [live re-verification: behavioral tests scoped]
+............                                                             [100%]
+12 passed in 0.01s
+--- stderr ---
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:49Z

@@ -1,0 +1,28 @@
+# SHA-256 manifest — PR1 audit remediation run (2026-08-30, worktree of cec43d3)
+# generated_utc=2026-08-30T11:07:03Z
+# head_at_capture: cec43d39212b46b105dae318e6e5ca96627285b3 (pre-commit; remediation edits present in working tree)
+# sha256sums.txt excludes itself. Post-commit verification: every path below must hash identically at the remediation commit.
+
+2cbba15e1d83d2d3568de3f44a8e2422abb36ffa97a2c86fd2e9255ba853519d  src/clinical_compiler/linter/conformance.py
+f38ddd6647059e2ebe2eb0170f0088bc244df70a6b1a2804681206e571061de1  src/clinical_compiler/renderers/deterministic.py
+be236099572a89adb6a7c534f2ea654961ccf7f6e11440db3aea95613a26aa1e  tests/unit/test_linter_conformance.py
+ce980fa78cd754b7c8722f1363b187ed366c3269bfd95ccd9125bb45e45a81b0  tests/unit/test_renderers_deterministic.py
+38e35a92f63b22ed7b30c485c13596a188325b91bc88eb2d03d769f7856759d5  openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md
+7a893dd21143541be0df1626d3dce1fe585f95cf9c39acf9f8c8865e6e589b69  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/preflight-first.txt
+77eb3dc5f46e8f335e01e3b016de0b48af1013ed1a9a9b1a0f23208875ff8ff4  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/repro-before-fix/defects-before-fix.txt
+1e368930625bd6342bbe57089990ccef4001f9357f2fac200065cbbe7dae710f  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/tdd/red-before-fix.txt
+2fc90fa615cbe93ee8fabd86af51077175e66d7b31d714f3308bfd41153da07b  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/tdd/green-after-fix.txt
+33324741d914e6e60bb8b73024124bef9dd02aedc7c2d0aa3d964d209e4c19ba  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/cli-sweep.md
+0ecac0e896b142fe3ae5e7a9fafb75c4e541b3f69d394115ba79cd1af5780573  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/README.md
+889e75c1f81a4ab5f3cf4d381db6e691735c74f8d509e684abc51c999306ceb3  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/01-pytest-coverage.log
+353928f0a387bfd90366faf87b15c22a19009a4fc73c5cc15d2aeb3b6b85c501  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/02-mypy-strict.log
+64dac93b5b2cd7b0a849b4574ee0062e30eedb96e5ee2671f89e1e4cb3bce59e  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/03-ruff-check.log
+51ffdb12842f6d77e58d18d51e319ba99b72d2aaed564ebd8f194f6dafdc69fc  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/04-golden-machinery-verify.log
+eff448e9936b90f7db26744474a817606cb978ed5ac9b5a5eda950089ff7533b  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/05-determinism-hashseed.log
+7701db3a3bdbb955c4b459b8e601bb320cda9a3d68ca4ac22b3ea93c62288773  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/06-git-diff-check.log
+3c45ab03d21f3a41e322cee57a8a4efc5cf9273feac5445df5abbb2534dfa24c  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/07-imports-review.log
+3a6370a995ac72658d90d6773cdeeb28cde04b3c1620c10c6aa87502a6e56a88  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/08-zero-runtime-deps.log
+f7d6b3db97f249d3bf78463500107c61b43591eec4092e6b257ad03b86855a50  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/09-determinism-scan.log
+09e6245f4df38d32d6fb61c541463e0ee0931af797cde785d71fe37da993b0dc  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/10-admissibility-explicit-policy.log
+8b49c4c0f98fde9bc68c436e35909318093661b196bf2563bedfa8a5fc64bf05  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/11-doc-diagnostics-noncoexistence.log
+336b265e328561890a638b7f042ac9223e884946e8bdd0726f40648ffe8615e5  openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/12-exit70-sweep.log

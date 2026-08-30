@@ -1,0 +1,31 @@
+# repro-before-fix — captured against the PRE-FIX tree
+# captured_utc=2026-08-30T10:55:21Z
+# head: cec43d39212b46b105dae318e6e5ca96627285b3 (detached worktree of cec43d3, remediation edits NOT yet applied)
+# interpreter: 3.14.2 via uv run --no-sync python
+
+=== DEFECT 1: linter accepts EMPTY provenance source_ref ===
+b'TA: 72 [present] [monitor ]\n'
+    -> diagnostics=() admitted=(b'TA: 72 [present] [monitor ]\n',) [PASSES (DEFECT)]
+b'TA: missing [missing] [lab ]\n'
+    -> diagnostics=() admitted=(b'TA: missing [missing] [lab ]\n',) [PASSES (DEFECT)]
+b'TA: not_applicable [not_applicable] [monitor ]\n'
+    -> diagnostics=() admitted=(b'TA: not_applicable [not_applicable] [monitor ]\n',) [PASSES (DEFECT)]
+b'FC: 72 [present] [monitor   ]\n'
+    -> diagnostics=() admitted=(b'FC: 72 [present] [monitor   ]\n',) [PASSES (DEFECT)]
+
+=== DEFECT 2: renderer emits canonical-breaking characters verbatim ===
+value U+0000 NUL         -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\x00 [present] [clinical_note n-1]\n'
+value U+0009 TAB         -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\tbpm [present] [clinical_note n-1]\n'
+value U+0085 NEL         -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\xc2\x85 [present] [clinical_note n-1]\n'
+value U+007F DEL         -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\x7f [present] [clinical_note n-1]\n'
+value U+009F C1          -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\xc2\x9f [present] [clinical_note n-1]\n'
+value U+2028 LS          -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\xe2\x80\xa8FC: 999 [present] [clinical_note n-1]\n'
+value U+2029 PS          -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72\xe2\x80\xa9FC: 999 [present] [clinical_note n-1]\n'
+source_ref U+2028 LS     -> RENDERED VERBATIM (DEFECT): b'FC: unknown [not_assessed]\nTA: 72 [present] [clinical_note m\xe2\x80\xa81]\n'
+
+=== boundary sanity on CURRENT tree (must keep rendering after fix) ===
+enye       -> rendered
+degree     -> rendered
+em-dash    -> rendered
+
+# finished_utc=2026-08-30T10:55:21Z

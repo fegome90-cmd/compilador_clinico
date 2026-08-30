@@ -1,0 +1,50 @@
+# FENCE — pre-commit (Phase 6)
+TS=2026-08-30T11:07:14Z
+
+$ git rev-parse HEAD
+cec43d39212b46b105dae318e6e5ca96627285b3
+
+$ git status --short
+ M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md
+ M src/clinical_compiler/linter/conformance.py
+ M src/clinical_compiler/renderers/deterministic.py
+ M tests/unit/test_linter_conformance.py
+ M tests/unit/test_renderers_deterministic.py
+?? openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/
+
+$ git diff --stat
+ .../verify-report.md                               |  21 ++++
+ src/clinical_compiler/linter/conformance.py        |  24 +++-
+ src/clinical_compiler/renderers/deterministic.py   |  82 ++++++++++++-
+ tests/unit/test_linter_conformance.py              |  57 +++++++++
+ tests/unit/test_renderers_deterministic.py         | 127 ++++++++++++++++++++-
+ 5 files changed, 301 insertions(+), 10 deletions(-)
+
+$ git diff --name-status
+M	openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md
+M	src/clinical_compiler/linter/conformance.py
+M	src/clinical_compiler/renderers/deterministic.py
+M	tests/unit/test_linter_conformance.py
+M	tests/unit/test_renderers_deterministic.py
+
+$ git ls-files --others --exclude-standard
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/README.md
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/01-pytest-coverage.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/02-mypy-strict.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/03-ruff-check.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/04-golden-machinery-verify.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/05-determinism-hashseed.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/06-git-diff-check.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/07-imports-review.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/08-zero-runtime-deps.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/09-determinism-scan.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/10-admissibility-explicit-policy.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/11-doc-diagnostics-noncoexistence.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/battery/12-exit70-sweep.log
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/cli-sweep.md
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/fence-pre-commit.txt
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/preflight-first.txt
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/repro-before-fix/defects-before-fix.txt
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/sha256sums.txt
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/tdd/green-after-fix.txt
+openspec/changes/archive/2026-08-29-clinical-compiler-r1/outputs/pr1-audit-remediation-20260830/tdd/red-before-fix.txt

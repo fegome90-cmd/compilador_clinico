@@ -517,6 +517,63 @@ def test_assessed_lines_without_provenance_fail(line: bytes) -> None:
     assert result.admitted == ()
 
 
+# --- Audit remediation (2026-08-30): empty provenance source_ref ----------------
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        b"TA: 72 [present] [monitor ]\n",
+        b"TA: missing [missing] [lab ]\n",
+        b"TA: not_applicable [not_applicable] [monitor ]\n",
+        b"FC: 72 [present] [monitor   ]\n",
+        b"TA: 120/80 [present] [clinical_note \t]\n",
+    ],
+)
+def test_empty_source_ref_yields_lint_failure(line: bytes) -> None:
+    """Audit defect (2026-08-30): a clinical line carrying a
+    present/missing/not_applicable marker MUST carry NON-EMPTY
+    provenance — ``[monitor ]`` (empty ref) or a whitespace-only ref is
+    provenance in name only, and is rejected as ``LINT_FAILURE``.
+    Defense-in-depth only: the pipeline already rejects empty refs at
+    the frozen contract (7d08951); these bytes are hand-injected past
+    the pipeline to exercise the byte-level net directly."""
+    result = _lint(line)
+    assert _codes(result) == (DiagnosticCode.LINT_FAILURE,)
+    assert "source_ref" in result.diagnostics[0].message
+    assert "empty" in result.diagnostics[0].message
+    assert result.admitted == ()
+
+
+def test_empty_source_ref_violations_enumerate_in_line_order_deterministically() -> (
+    None
+):
+    """D1 + determinism: two empty-ref lines enumerate exactly one
+    LINT_FAILURE each, in line order, and identical bytes yield
+    byte-identical diagnostics."""
+    document = (
+        b"FC: 72 [present] [monitor ]\n"
+        b"TA: 120/80 [present] [clinical_note ]\n"
+    )
+    first = _lint(document)
+    second = _lint(document)
+    assert first.diagnostics == second.diagnostics
+    messages = _messages(first)
+    assert len(messages) == 2
+    assert "line 1" in messages[0] and "empty" in messages[0]
+    assert "line 2" in messages[1] and "empty" in messages[1]
+    assert first.admitted == ()
+
+
+def test_not_assessed_lines_remain_the_only_provenance_less_form() -> None:
+    """The unassessed line ``{field}: unknown [not_assessed]`` carries NO
+    provenance segment at all and stays lint-clean — the empty-ref rule
+    must not over-block the one legitimate provenance-less form."""
+    result = _lint(b"TA: unknown [not_assessed]\n")
+    assert result.diagnostics == ()
+    assert result.admitted == (b"TA: unknown [not_assessed]\n",)
+
+
 # --- Unknown mode (fail-closed) --------------------------------------------------
 
 

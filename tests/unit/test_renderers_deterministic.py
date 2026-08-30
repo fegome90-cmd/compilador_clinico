@@ -33,7 +33,10 @@ from clinical_compiler.core.types import (
     Provenance,
 )
 from clinical_compiler.pipeline_types import StageResult
-from clinical_compiler.renderers.deterministic import render_document
+from clinical_compiler.renderers.deterministic import (
+    CANONICAL_BREAKING_CHARACTERS,
+    render_document,
+)
 
 MODE = "NURSING_RECORD_TELEGRAPHIC"
 ROLE = "telegraphic_entry"
@@ -384,6 +387,128 @@ def test_source_ref_with_line_break_is_unrenderable_render_error(
     assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
     assert result.admitted == ()
     assert "source_ref" in result.diagnostics[0].message
+
+
+# --- Audit remediation (2026-08-30): frozen canonical-breaking charset ----------
+
+
+def test_canonical_breaking_charset_is_explicit_frozen_and_complete() -> None:
+    """The refusal set is an EXPLICIT FROZEN codepoint set — C0 controls
+    U+0000–U+001F (incl. TAB/LF/CR), DEL U+007F, C1 controls U+0080–
+    U+009F (incl. NEL U+0085), LINE SEPARATOR U+2028, PARAGRAPH
+    SEPARATOR U+2029 — 67 characters, frozen as a module constant with
+    NO ``unicodedata`` runtime dependency (determinism across Python
+    versions). Mutating the set membership fails here."""
+    assert isinstance(CANONICAL_BREAKING_CHARACTERS, frozenset)
+    expected_ords = (
+        tuple(range(0x0020))  # C0 U+0000–U+001F
+        + (0x007F,)
+        + tuple(range(0x0080, 0x00A0))  # C1 U+0080–U+009F
+        + (0x2028, 0x2029)
+    )
+    assert len(CANONICAL_BREAKING_CHARACTERS) == len(expected_ords) == 67
+    for codepoint in expected_ords:
+        assert chr(codepoint) in CANONICAL_BREAKING_CHARACTERS
+    # LF/CR stay in the set (they remain the named "line break" fault).
+    assert "\n" in CANONICAL_BREAKING_CHARACTERS
+    assert "\r" in CANONICAL_BREAKING_CHARACTERS
+
+
+@pytest.mark.parametrize(
+    ("character", "codepoint_label"),
+    [
+        ("\x00", "U+0000"),
+        ("\t", "U+0009"),
+        ("\x7f", "U+007F"),
+        ("\x85", "U+0085"),
+        ("\x9f", "U+009F"),
+        ("\u2028", "U+2028"),
+        ("\u2029", "U+2029"),
+    ],
+)
+def test_value_with_canonical_breaking_character_fails_closed(
+    character: str,
+    codepoint_label: str,
+) -> None:
+    """Audit defect (2026-08-30): every character class of the frozen
+    set in a verbatim string value → ``RENDER_ERROR`` naming the exact
+    codepoint, never bytes, never a transformation. U+2028/U+2029 are
+    invisible line breaks in most viewers: rendering them verbatim would
+    fabricate a second visual line inside one physical line."""
+    fact = _canonical_fact(value=_clinical_value(value=f"72{character}"))
+    result = _render((fact,))
+    assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
+    assert result.admitted == ()
+    assert codepoint_label in result.diagnostics[0].message
+
+
+@pytest.mark.parametrize(
+    ("character", "codepoint_label"),
+    [
+        ("\x00", "U+0000"),
+        ("\t", "U+0009"),
+        ("\x7f", "U+007F"),
+        ("\x85", "U+0085"),
+        ("\x9f", "U+009F"),
+        ("\u2028", "U+2028"),
+        ("\u2029", "U+2029"),
+    ],
+)
+def test_source_ref_with_canonical_breaking_character_fails_closed(
+    character: str,
+    codepoint_label: str,
+) -> None:
+    """The same frozen closure over the provenance segment — a
+    ``source_ref`` carrying any canonical-breaking character has no
+    canonical single-line rendering and fails closed with
+    ``RENDER_ERROR`` naming the exact codepoint."""
+    fact = _canonical_fact(
+        value=_clinical_value(
+            provenance=Provenance(
+                source_kind="monitor", source_ref=f"m{character}1"
+            )
+        ),
+    )
+    result = _render((fact,))
+    assert _codes(result) == (DiagnosticCode.RENDER_ERROR,)
+    assert result.admitted == ()
+    assert "source_ref" in result.diagnostics[0].message
+    assert codepoint_label in result.diagnostics[0].message
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "120/80",
+        "ñ",
+        "36.6 °C",
+        "café — reposo",
+        "72 bpm (stable)",
+        "áéíóú ü ß",
+    ],
+)
+def test_printable_and_typical_unicode_values_still_render(value: str) -> None:
+    """Boundary (no over-blocking): plain printable ASCII and typical
+    clinical unicode (accents, degree sign, em dash) render verbatim as
+    before — the refusal set is exact, not a category approximation."""
+    result = _render((_canonical_fact(value=_clinical_value(value=value)),))
+    assert result.diagnostics == ()
+    assert value.encode("utf-8") in result.admitted[0]
+
+
+@pytest.mark.parametrize("ref", ["n-1", "nota-ñ-1", "lab/2026/08/29", "m-9 (rev 2)"])
+def test_printable_source_refs_still_render(ref: str) -> None:
+    """Boundary (no over-blocking): printable ``source_ref`` strings —
+    including accented and punctuation-bearing refs — render with their
+    provenance segment intact."""
+    fact = _canonical_fact(
+        value=_clinical_value(
+            provenance=Provenance(source_kind="monitor", source_ref=ref)
+        ),
+    )
+    result = _render((fact,))
+    assert result.diagnostics == ()
+    assert f"[monitor {ref}]".encode() in result.admitted[0]
 
 
 def test_multiple_inconsistencies_are_all_enumerated() -> None:

@@ -1,0 +1,50 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T11:04:43Z
+description: Full suite with branch-coverage gate (expect 463 passed = 432 prior + 6 linter + 25 renderer new tests; cov >= 95)
+command: uv run --no-sync pytest --cov=clinical_compiler --cov-report=term-missing --strict-markers -q -p no:cacheprovider 
+--- exit_code: 0
+--- stdout ---
+........................................................................ [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 46%]
+........................................................................ [ 62%]
+........................................................................ [ 77%]
+........................................................................ [ 93%]
+................................                                         [100%]
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.14.2-final-0 _______________
+
+Name                                                     Stmts   Miss Branch BrPart  Cover   Missing
+----------------------------------------------------------------------------------------------------
+src/clinical_compiler/__init__.py                            2      0      0      0   100%
+src/clinical_compiler/adapters/__init__.py                   0      0      0      0   100%
+src/clinical_compiler/adapters/contract.py                  73      0     28      0   100%
+src/clinical_compiler/adapters/seed.py                      83      0     36      0   100%
+src/clinical_compiler/adapters/structured_feed.py           23      0      4      0   100%
+src/clinical_compiler/cli.py                                95      0     14      0   100%
+src/clinical_compiler/core/__init__.py                       0      0      0      0   100%
+src/clinical_compiler/core/diagnostics.py                   14      0      0      0   100%
+src/clinical_compiler/core/ir.py                            26      0     10      0   100%
+src/clinical_compiler/core/policy.py                         2      0      0      0   100%
+src/clinical_compiler/core/types.py                         21      0      0      0   100%
+src/clinical_compiler/linter/__init__.py                     0      0      0      0   100%
+src/clinical_compiler/linter/conformance.py                 70      0     32      0   100%
+src/clinical_compiler/passes/__init__.py                     0      0      0      0   100%
+src/clinical_compiler/passes/admissibility.py               31      0     12      0   100%
+src/clinical_compiler/passes/document_selection.py          18      0      6      0   100%
+src/clinical_compiler/passes/input_validation.py            36      0     20      0   100%
+src/clinical_compiler/passes/semantic_normalization.py      37      0     14      0   100%
+src/clinical_compiler/pipeline.py                           72      0     22      0   100%
+src/clinical_compiler/pipeline_types.py                      7      0      0      0   100%
+src/clinical_compiler/renderers/__init__.py                  0      0      0      0   100%
+src/clinical_compiler/renderers/deterministic.py            82      0     46      0   100%
+----------------------------------------------------------------------------------------------------
+TOTAL                                                      692      0    244      0   100%
+Required test coverage of 95.0% reached. Total coverage: 100.00%
+464 passed in 1.71s
+--- stderr ---
+/Users/felipe_gonzalez/Developer/compilador_clinico-audit-cec43d3/.venv/lib/python3.14/site-packages/coverage/inorout.py:574: CoverageWarning: Module clinical_compiler was previously imported, but not measured (module-not-measured); see https://coverage.readthedocs.io/en/7.15.4/messages.html#warning-module-not-measured
+  self.warn(msg, slug="module-not-measured")
+--- target_sha: cec43d39212b46b105dae318e6e5ca96627285b3 (battery executed PRE-COMMIT in the detached worktree of the PR head; remediation edits present in the working tree and committed immediately after — byte-identity of battery-tested vs committed content proven via sha256sums.txt and the post-commit fence)
+--- working_tree_status: 5 non-evidence entries (evidence dir excluded):  M openspec/changes/archive/2026-08-29-clinical-compiler-r1/verify-report.md; M src/clinical_compiler/linter/conformance.py; M src/clinical_compiler/renderers/deterministic.py; M tests/unit/test_linter_conformance.py; M tests/unit/test_renderers_deterministic.py;
+ts_end_utc: 2026-08-30T11:04:45Z
