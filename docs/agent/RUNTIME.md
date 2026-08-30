@@ -84,6 +84,6 @@ The production compiler defines zero required or optional environment variables.
 
 ## Observability
 
-- **Diagnostics:** Emitted to `sys.stderr` in structured diagnostic format (`CODE: message [path/field]`).
+- **Diagnostics:** Emitted to `sys.stderr` in stable diagnostic format (`CODE: message` or `CODE: message (path)`).
 - **Audit Lineage:** Every canonical fact references constituent source facts (`source_fact_refs`).
 - **Telemetry / Logs / Metrics:** No external logging daemon, APM, or remote telemetry is present or permitted.

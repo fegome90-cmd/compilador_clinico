@@ -141,7 +141,7 @@ Key structural properties preserved across all layers:
 **Responsibility:** Defining foundational types, immutable IR dataclasses, diagnostic definitions, and static policy defaults.
 **Owns:** `Certainty`, `Missingness`, `Provenance`, `ClinicalValue`, `SourceFactIR`, `CanonicalClinicalFact`, `CanonicalClinicalIR`, `DocumentEntry`, `DocumentIR`, `DiagnosticCode`, `Diagnostic`, `NEVER_AUTO_TERMS`.
 **Does not own:** File I/O, parsing, pass logic, rendering, or CLI execution.
-**Depends on:** Standard library only (`dataclasses`, `enum`, `typing`). Leaf module with zero internal package dependencies.
+**Depends on:** Standard library only (`dataclasses`, `enum`, `typing`). Leaf domain module importing standard library only, with relative intra-core imports (e.g. `core.ir` importing `.types`). Zero dependencies on outer compiler layers.
 **Used by:** All compiler passes, adapters, renderers, linter, and pipeline.
 
 ## Dependency Rules

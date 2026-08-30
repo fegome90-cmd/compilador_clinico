@@ -54,7 +54,7 @@ uv run --no-sync mypy --strict src
 
 # structural context validation
 # structural context validation (with ACS_ROOT set to agent-context-system skill path)
-python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" .
+python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" . --strict-generated
 ```
 
 Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, and structural context valid.
