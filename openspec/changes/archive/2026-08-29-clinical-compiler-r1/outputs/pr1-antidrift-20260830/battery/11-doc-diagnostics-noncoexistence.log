@@ -1,0 +1,38 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:20:51Z
+description: Diagnostics/document non-coexistence: construction-unrepresentable + behavioral tests
+command: /tmp/pr1-antidrift-scratch/noncoexist_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+### [code] construction-unrepresentable: CompileResult.__post_init__ guard
+171:    def __post_init__(self) -> None:
+172-        if self.document is not None and self.diagnostics:
+173-            raise ValueError(
+174-                "CompileResult carries a document AND diagnostics —"
+175-                " emission is fail-closed: any diagnostic blocks the"
+176-                " document"
+177-            )
+178-        if self.document is None and not self.diagnostics and self.policy.is_resolved:
+179-            raise ValueError(
+180-                "CompileResult carries neither document nor"
+181-                " diagnostics under a RESOLVED policy — a clean run"
+182-                " emits its document; an empty outcome exists only"
+183-                " under UNRESOLVED_POLICY"
+
+### [test citations]
+- tests/unit/test_pipeline.py:540 test_document_with_diagnostics_is_unrepresentable — ValueError on construction with both
+- tests/unit/test_pipeline.py:296 test_any_diagnostic_yields_no_document_and_the_family_exit_code — behavioral: any diagnostic -> document is None + family exit
+- tests/unit/test_pipeline.py:146 test_happy_path_emits_document_with_empty_diagnostics_and_exit_zero — behavioral: document IFF empty diagnostics
+
+### [live re-verification: construction unrepresentability]
+live: doc+diagnostics construction raised ValueError: CompileResult carries a document AND diagnostics — emission is fail-cl ...
+live: silent-empty-under-resolved raised ValueError: CompileResult carries neither document nor diagnostics under a RESOLVE ...
+live: legal outcome (document, no diagnostics) constructs fine
+
+### [live re-verification: behavioral tests scoped]
+............                                                             [100%]
+12 passed in 0.01s
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 1 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: ?? .ve-light-full.jpeg;

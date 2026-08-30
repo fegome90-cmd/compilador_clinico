@@ -1,0 +1,10 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:19:26Z
+description: git diff --check (whitespace errors / conflict markers in tracked changes)
+command: git diff --check 
+--- exit_code: 0
+--- stdout ---
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 0 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: 

@@ -1,0 +1,40 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:21:57Z
+description: Exit-70 sweep: full invalid-input family through CLI — all cases map to frozen exits 0/2/3/4/6/9, ZERO 70 (veto case value contains the seeded term)
+command: /tmp/pr1-antidrift-scratch/exit70_sweep_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+### invalid-input family sweep (CLI, fresh interpreter per case) — ZERO 70 required
+empty fact_id                          expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: fact_id must be a non-empty string
+empty source_ref                       expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: source_ref must be a non-empty string
+bad certainty name                     expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: source_asserted_certainty 'definitely' outside the taxonomy
+field outside contract                 expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: field_id 'ZZ' outside the frozen contract
+source_kind outside vocab              expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: source_kind 'psychic' outside the frozen vocabulary
+missing required keys                  expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: missing required key 'provenance'
+unknown key                            expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: unknown key 'extra'
+bool raw_value (numeric F)             expected=4   actual=4   OK | stderr1=TYPE_ERROR: raw_value of type 'bool' is not admissible for field 'FC'
+str raw_value on FC                    expected=4   actual=4   OK | stderr1=TYPE_ERROR: raw_value of type 'str' is not admissible for field 'FC'
+injection: value LF                    expected=9   actual=9   OK | stderr1=RENDER_ERROR: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f519572
+injection: source_ref LF               expected=9   actual=9   OK | stderr1=RENDER_ERROR: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f519572
+seed terms=[]                          expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_empty_terms.json' ca
+seed empty-string term                 expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_empty_term.json' ter
+seed non-string term                   expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_nonstring.json' term
+seed wrong shape                       expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_wrongshape.json' mus
+seed malformed JSON                    expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_badjson.json' is not
+seed terms not a list                  expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/seed_terms_notlist.json' 
+seed file missing                      expected=2   actual=2   OK | stderr1=UNRESOLVED_POLICY: policy seed '/tmp/pr1-antidrift-scratch/sweep/definitely-missing.json' 
+input file missing                     expected=2   actual=2   OK | stderr1=clinical-compiler: error: cannot read input '/tmp/pr1-antidrift-scratch/sweep/definitely-m
+no arguments                           expected=2   actual=2   OK | stderr1=clinical-compiler: error: the following arguments are required: command
+unknown subcommand                     expected=2   actual=2   OK | stderr1=clinical-compiler: error: argument command: invalid choice: 'frobnicate' (choose from comp
+unknown --mode                         expected=2   actual=2   OK | stderr1=clinical-compiler: error: argument --mode: invalid choice: 'OPERA' (choose from NURSING_RE
+bad UTF-8 feed                         expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: bytes are not valid UTF-8
+invalid JSONL line                     expected=3   actual=3   OK | stderr1=INPUT_CONTRACT_ERROR: line 1 is not valid JSON
+veto hit (populated seed)              expected=6   actual=6   OK | stderr1=POLICY_VIOLATION: canonical fact 'TA:16aa7debf492d11365feab923d48ed236e40514fc7686d0031f51
+valid run                              expected=0   actual=0   OK | stderr1=
+valid run, absent flag                 expected=0   actual=0   OK | stderr1=
+### exit-70 count above: 
+sweep_overall_exit=0 (0 = every case mapped, zero 70)
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 2 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: ?? .ve-dark-full.jpeg;?? .ve-light-full.jpeg;

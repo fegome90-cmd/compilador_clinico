@@ -1,0 +1,26 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:19:35Z
+description: Determinism scan: datetime|locale|random|hash( in src — every hit must be comment/docstring only
+command: /tmp/pr1-antidrift-scratch/detscan_wrapper.sh 
+--- exit_code: 0
+--- stdout ---
+### raw scan: datetime|locale|random|hash( in src
+src/clinical_compiler/pipeline.py:65:globals mutated, no time/locale/random/env in any output path.
+src/clinical_compiler/cli.py:48:network, no subprocess/shell, no eval/exec, no time/locale/random in any
+src/clinical_compiler/passes/document_selection.py:44:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/passes/semantic_normalization.py:49:``fact_id`` set (stdlib ``hashlib``/``json`` only; never random, uuid,
+src/clinical_compiler/linter/conformance.py:77:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/renderers/deterministic.py:63:Determinism (design Determinism Mechanism): no time/locale/random/
+src/clinical_compiler/renderers/deterministic.py:100:    (locale-free, never locale ``format()``); strings verbatim — but a
+
+### call-site scan: assignments/calls that would COMPUTE at runtime in output paths
+(no call sites — all hits above are docstrings/comments/identifier substrings)
+
+### hashlib usage (allowed: stdlib sha256 for deterministic ids — confirm each site)
+src/clinical_compiler/passes/semantic_normalization.py:49:``fact_id`` set (stdlib ``hashlib``/``json`` only; never random, uuid,
+src/clinical_compiler/passes/semantic_normalization.py:60:import hashlib
+src/clinical_compiler/passes/semantic_normalization.py:94:    digest = hashlib.sha256(preimage.encode("utf-8")).hexdigest()
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 0 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: 

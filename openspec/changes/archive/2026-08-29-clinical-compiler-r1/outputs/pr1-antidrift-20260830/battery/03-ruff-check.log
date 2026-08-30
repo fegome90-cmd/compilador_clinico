@@ -1,0 +1,11 @@
+=== BATTERY LOG ===
+date_utc: 2026-08-30T10:17:25Z
+description: ruff check over src and tests (lint gate)
+command: uv run --no-sync ruff check src tests 
+--- exit_code: 0
+--- stdout ---
+All checks passed!
+--- stderr ---
+--- target_sha: 7d0895133d0ca74a889e3f3270f3a4b9f497f4cd
+--- working_tree_status: 0 non-evidence/non-claude entries (evidence dir + .claude/ session runtime files excluded)
+--- working_tree_detail: 
