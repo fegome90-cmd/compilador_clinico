@@ -94,11 +94,11 @@ def _stable_raw_value_key(value: object) -> tuple[str, str]:
     if value is None:
         return ("none", "")
     value_type = type(value)
-    if value_type is int:
+    if isinstance(value, int) and value_type is int:
         return ("int", str(value))
-    if value_type is float:
+    if isinstance(value, float) and value_type is float:
         return ("float", value.hex())
-    if value_type is str:
+    if isinstance(value, str) and value_type is str:
         return ("str", value)
     return (
         "type",
