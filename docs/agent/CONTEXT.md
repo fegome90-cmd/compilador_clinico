@@ -16,7 +16,7 @@ The clinical record compiler compiles per-source structured clinical observation
 
 ### Structured Fact
 
-**Meaning:** An atomic observation received from an upstream source containing `fact_id`, `field_id`, `raw_value`, `source_kind`, and optional `source_asserted_certainty`.
+**Meaning:** An atomic observation received from an upstream source containing `fact_id`, `field_id`, `raw_value`, nested `provenance` (`source_kind`, `source_ref`), and optional `source_asserted_certainty`.
 **Related concepts:** `SourceFactIR`, `FieldContract`, `CanonicalClinicalFact`.
 **Do not confuse with:** Canonical clinical facts produced after semantic normalization.
 
@@ -82,7 +82,7 @@ The clinical record compiler compiles per-source structured clinical observation
 ### Upstream Clinical Ingestion Feed
 
 **Relationship:** Provides raw JSONL lines representing patient observations.
-**Information exchanged:** JSON objects containing `fact_id`, `field_id`, `timestamp`, `raw_value`, `source_kind`, and optional `source_asserted_certainty`.
+**Information exchanged:** JSON objects containing `fact_id`, `field_id`, `raw_value`, nested `provenance` (`source_kind`, `source_ref`), and optional `source_asserted_certainty`.
 **Canonical contract/source:** `openspec/specs/input-contract/spec.md` and `src/clinical_compiler/adapters/contract.py`.
 
 ## Domain Constraints

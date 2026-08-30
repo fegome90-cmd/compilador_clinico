@@ -36,8 +36,7 @@ bytes (JSONL) ──▶ adapters/contract + structured_feed ──▶ SourceFact
                                          linter/conformance ── LINT_FAILURE
                                                          │
                                                          ▼
-                                              Document bytes (UTF-8,
-)
+                                              Document bytes (UTF-8, \n)
                                               diagnostics on stderr (one per line)
 ```
 

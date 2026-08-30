@@ -172,7 +172,7 @@ Key structural properties preserved across all layers:
 ## External and Trust Boundaries
 
 - **Input Ingestion Boundary:** External JSONL input is parsed via `adapters.structured_feed` and strictly validated against `adapters.contract`. Unknown fields, malformed JSON, and invalid types produce diagnostics immediately and are quarantined.
-- **Policy Ingestion Boundary:** `--policy-seed` must be valid JSON matching `{"terms": ["term_a"]}`. An invalid seed yields `PolicyResolutionState.INVALID_SCHEMA` / `UNRESOLVED_POLICY` and blocks execution with exit code 2. If `--policy-seed` is omitted, the empty policy state is authorized strictly via `DEFERRED_BY_OWNER_DECISION`.
+- **Policy Ingestion Boundary:** `--policy-seed` must be valid JSON matching `{"terms": ["term_a"]}`. An invalid seed yields `PolicyResolutionState.UNRESOLVED_POLICY` (with typed fault reasons such as `PolicySeedFault.WRONG_SHAPE` or `PolicySeedFault.MALFORMED_JSON`) and blocks execution with exit code 2. If `--policy-seed` is omitted, the empty policy state is authorized strictly via `DEFERRED_BY_OWNER_DECISION`.
 - **Pure Core Boundary:** All passes operate on immutable data structures and return typed `StageResult[T]` containers with zero filesystem or network side effects.
 - **Atomic Output Boundary:** Output files are written to a temporary file in the destination directory, flushed, fsynced, and atomically replaced (`os.replace`). Failed runs produce zero output files.
 
@@ -187,17 +187,17 @@ Key structural properties preserved across all layers:
 6. Linter validates byte conformance against mode grammar.
 7. CLI atomically writes bytes to `out.txt` and exits with code 0.
 
-### Quarantined Fact Compilation (`exit 0` with surviving document)
-1. Input contains three facts: one invalid timestamp, two valid facts.
+### Quarantined Fact Compilation (Fail-Closed Diagnostic Exit)
+1. Input contains three facts: one invalid type (e.g. `bool` for `FC`), two valid facts.
 2. Input validation quarantines the invalid fact with a diagnostic and returns two surviving facts.
 3. Because diagnostics are present at the whole-run emission gate, document emission is suppressed.
-4. CLI emits diagnostics to stderr and exits with the exit code corresponding to the highest-severity diagnostic.
+4. CLI emits diagnostics to stderr and exits with the exit code corresponding to the earliest stage-order diagnostic (exit 4 in this scenario).
 
-### Unresolved Policy Failure (`exit 2` or `exit 70`)
+### Unresolved Policy Failure (CLI Usage Exit 2)
 1. User provides `--policy-seed bad_seed.json` with malformed structure.
-2. CLI fails policy resolution with `PolicySeedFault.INVALID_SCHEMA` and `UNRESOLVED_POLICY`.
+2. CLI fails policy resolution with a typed fault (such as `PolicySeedFault.WRONG_SHAPE` or `PolicySeedFault.MALFORMED_JSON`) and state `PolicyResolutionState.UNRESOLVED_POLICY`.
 3. Execution blocks immediately before admissibility.
-4. CLI prints diagnostic to stderr and exits with code 2.
+4. CLI prints diagnostic to stderr and exits with usage exit code 2.
 
 ## Cross-Cutting Concepts
 
