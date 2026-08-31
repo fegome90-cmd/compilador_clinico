@@ -73,7 +73,7 @@ Key structural properties preserved across all layers:
 +-----------------------------------------------------------------------------------+
 | DRIVEN RENDERERS & LINTER                                                         |
 |  - renderers.deterministic: render_document (Canonical formatting, LF, glyphs)   |
-|  - linter.conformance: lint_conformance (Independent AST/grammar validation)       |
+|  - linter.conformance: lint_conformance (Independent byte/grammar validation)      |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -126,7 +126,7 @@ Key structural properties preserved across all layers:
 #### Deterministic Renderer (`clinical_compiler.renderers.deterministic`)
 **Responsibility:** Converting `DocumentIR` and `CanonicalClinicalIR` into bit-deterministic UTF-8 encoded bytes.
 **Owns:** `render_document`.
-**Does not own:** AST grammar validation or conformance checking.
+**Does not own:** Byte grammar validation or conformance checking.
 **Depends on:** `core.ir`, `core.types`, `core.diagnostics`, `pipeline_types`.
 **Used by:** `clinical_compiler.pipeline`.
 
@@ -171,7 +171,7 @@ Key structural properties preserved across all layers:
 |---|---|---|---|---|
 | Raw Observation Record | `SourceFactIR` | `adapters.contract:map_record` | `passes.input_validation`, `passes.semantic_normalization` | In-memory during run |
 | Canonical Clinical Fact | `CanonicalClinicalFact` | `passes.semantic_normalization` | `passes.admissibility`, `renderers.deterministic` | In-memory during run |
-| Canonical Fact Aggregate | `CanonicalClinicalIR` | `passes.semantic_normalization`, `passes.admissibility` | `passes.document_selection`, `renderers.deterministic` | In-memory during run |
+| Canonical Fact Aggregate | `CanonicalClinicalIR` | `pipeline:run` | `passes.document_selection`, `renderers.deterministic` | In-memory during run |
 | Document Structure | `DocumentIR` | `passes.document_selection` | `renderers.deterministic` | In-memory during run |
 | Clinical Policy Terms | `PolicyResolution` | `adapters.seed:load_policy_seed` | `passes.admissibility` | In-memory during run |
 | Compilation Result | `CompileResult` | `pipeline:run` | `clinical_compiler.cli:_emit`, `_atomic_write` | In-memory / derived bytes |
@@ -217,7 +217,7 @@ Key structural properties preserved across all layers:
 
 ## Architectural Invariants
 
-- **INV-001 (Zero Dependencies):** The runtime core and adapters depend exclusively on Python standard library modules.
+- **INV-001 (Zero Dependencies):** The compiler runtime has zero third-party dependencies, relying exclusively on the Python standard library.
 - **INV-002 (Certainty Separation):** Source-asserted certainty (`source_asserted_certainty`) is preserved verbatim and never converted into or derived from `source_kind`.
 - **INV-003 (R1 Certainty State):** Normalized clinical facts evaluate compiler certainty strictly to `Certainty.UNRESOLVED`.
 - **INV-004 (Missingness Distinction):** Assessed absence (`raw_value: null`) normalizes to `Missingness.MISSING`; unassessed data renders `unknown [not_assessed]`.

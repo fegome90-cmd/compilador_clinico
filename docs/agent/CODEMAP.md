@@ -39,7 +39,7 @@ If this document conflicts with live code or current specifications under `opens
 
 ### Renderers & Linter (`src/clinical_compiler/renderers/`, `src/clinical_compiler/linter/`)
 - **Primary files:** `renderers/deterministic.py`, `linter/conformance.py`
-- **Role:** Deterministic byte serialization and independent AST conformance validation.
+- **Role:** Deterministic byte serialization and independent byte/grammar conformance validation.
 - **Read first:** `renderers/deterministic.py` for canonical byte formatting rules.
 
 ## Critical Flows
