@@ -52,8 +52,7 @@ uv run --no-sync pytest --cov=clinical_compiler --cov-report=term-missing --stri
 uv run --no-sync ruff check src tests
 uv run --no-sync mypy --strict src
 
-# structural context validation
-# structural context validation (with ACS_ROOT set to agent-context-system skill path)
+# structural context validation (requires ACS v1.1 skill tooling)
 python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" . --strict-generated
 ```
 
