@@ -53,7 +53,7 @@ pipeline.py → cli.py
      documento a stdout/--output; diagnósticos a stderr; exit code
 ```
 
-El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:188-268`) y se describe normativamente en `openspec/changes/clinical-compiler-r1/design.md:195-247` y `docs/architecture.md:7-52`.
+El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:222-306`) y se describe normativamente en `openspec/specs/` y `docs/agent/ARCHITECTURE.md` (con registro histórico en `openspec/changes/archive/2026-08-29-clinical-compiler-r1/design.md`).
 
 ## Glosario esencial
 
@@ -68,7 +68,7 @@ El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:
 | **Determinismo** | La misma entrada produce los mismos bytes, IDs y diagnósticos: tuplas, orden explícito por codepoint, formato sin locale, UTF-8/LF y SHA-256. |
 | **PolicyResolution** | Estado de la política D7: seed poblado, vacío aprobado por `DEFERRED_BY_OWNER`, o `UNRESOLVED_POLICY`. El último bloquea antes de admissibility. |
 
-## Recorrido de una compilación
+## Recorrido de una compilacion
 
 ### Ruta exitosa
 
@@ -295,16 +295,16 @@ El linter duplica deliberadamente la tabla de glyphs del renderer para no valida
 
 ## Composición y shell
 
-### `src/clinical_compiler/pipeline.py:1-268`
+### `src/clinical_compiler/pipeline.py:1-307`
 
 **Imports relevantes:** dataclasses, `Final`, adapters, cuatro passes, renderer, linter, core y `StageResult` (`:61-76`).
 
-- `_STAGE_ORDER_EXIT_CODES` (`:86-95`): tabla explícita de diagnósticos a exits `3-10`.
-- `CompileRequest` (`:104-123`): `data: bytes`, `document_mode: str`, `policy: PolicyResolution`.
-- `CompileResult` (`:126-170`): `document: bytes | None`, diagnósticos y política.
-- `CompileResult.__post_init__` (`:153-170`): lanza `ValueError` si un documento coexiste con diagnósticos o si una política resuelta produce simultáneamente “sin documento y sin diagnóstico”.
-- `derive_exit_code(diagnostics)` (`:173-185`): función pura; calcula el menor exit de la tabla para el conjunto de códigos, o `0` si está vacío.
-- `run(request)` (`:188-268`): composición root. Llama a `parse_feed`, validación, normalización, política, admissibility, `CanonicalClinicalIR`, selección, render y lint en orden; detiene el camino de emisión ante cualquier diagnóstico. Una política no resuelta retorna antes de admissibility.
+- `_STAGE_ORDER_EXIT_CODES` (`:94-103`): tabla explícita de diagnósticos a exits `3-10`.
+- `CompileRequest` (`:113-131`): `data: bytes`, `document_mode: str`, `policy: PolicyResolution`.
+- `CompileResult` (`:135-184`): `document: bytes | None`, diagnósticos y política.
+- `CompileResult.__post_init__` (`:167-184`): lanza `ValueError` si un documento coexiste con diagnósticos o si una política resuelta produce simultáneamente “sin documento y sin diagnóstico”.
+- `derive_exit_code(diagnostics)` (`:187-199`): función pura; calcula el menor exit de la tabla para el conjunto de códigos, o `0` si está vacío.
+- `run(request)` (`:222-306`): composición root. Llama a `parse_feed`, validación, normalización, política, admissibility, `CanonicalClinicalIR`, selección, render y lint en orden; detiene el camino de emisión ante cualquier diagnóstico. Una política no resuelta retorna antes de admissibility.
 
 `run` es llamado por el CLI y por `tests/unit/test_pipeline.py`. No tiene `try/except`: la captura de excepción inesperada pertenece a `cli.main`.
 
@@ -471,7 +471,7 @@ cli.main
 
 La golden machinery tiene un chain paralelo (`compile_feed`) para validar la determinación del corpus. Los tests llaman los módulos directamente y no forman parte del runtime.
 
-# Discrepancias verificadas: documentación frente a checkout
+# Discrepancias verificadas: documentacion frente a checkout
 
 Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 
@@ -485,8 +485,8 @@ Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 | Convención `--no-sync` inconsistente | `tasks.md:5,20` la exige | Ejemplos del README (`:120-125,285-293`) la omiten | Para ejecución futura debe prevalecer la restricción del SDD; esta guía no ejecutó esos comandos. |
 | Docstring del golden chain es histórica | `tests/golden/golden_machinery.py:10-15` dice que `pipeline.py` aún no existe | `src/clinical_compiler/pipeline.py` sí existe | La machinery conserva texto de la etapa previa y recompone el chain por razones de test. |
 | Sketch de interfaces difiere de firmas reales | `design.md:305-329` muestra `str | None` y `run_admissibility(facts, veto_terms)` | El pipeline usa `bytes | None` (`pipeline.py:149`) y admissibility exige `source_fact_ids` (`:102-106`) | El propio código documenta estas lecturas mínimas; son seams de contrato, no detalles que deban inferirse. |
-| Seed vacío tiene una diferencia semántica | `docs/architecture.md:99` habla de términos no vacíos | `load_policy_seed` acepta `{"terms": []}` (`seed.py:273-297`); test explícito en `test_adapters_seed.py:154-166` | El comportamiento vivo permite seed owner-authored vacío como `POPULATED`; queda señalado para una decisión futura. |
-| Certainty de fuente no llega al documento | `design.md:281-286` separa ambas autoridades | `StructuredFeedFact` la conserva, pero `pipeline.py:203-218` reenvía solo `wrapper.fact` | En R1 la assertion vive en el wrapper del adapter; el canonical fact/render solo lleva certainty del compilador, siempre `UNRESOLVED`. |
+| Seed vacío tiene una diferencia semántica | `openspec/specs/diagnostics-policy/spec.md` y `seed.py:298-305` | `load_policy_seed` rechaza `{"terms": []}` con `EMPTY_TERMS` y retorna `UNRESOLVED_POLICY`; test en `test_adapters_seed.py:154-166` | Preserva el fail-closed: el set vacío solo es legal vía `DEFERRED_BY_OWNER_DECISION` cuando se omite el flag. |
+| Certainty de fuente no llega al documento | `design.md:281-286` separa ambas autoridades | `StructuredFeedFact` la conserva, pero `pipeline.py:203-218` reenvía solo `wrapper.fact` | En R1 la assertion vive en `SourceFactIR.source_asserted_certainty` y se expone en `CompileResult.source_asserted_certainties`; el canonical fact/render solo lleva certainty del compilador, siempre `UNRESOLVED`. |
 
 ## Ruta de lectura recomendada
 
@@ -500,7 +500,7 @@ Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 8. `pipeline.py`: composición y fail-closed.
 9. `cli.py`: argparse, emisión, exits y escritura atómica.
 10. Tests correspondientes a cada capa; después `tests/golden/golden_machinery.py` para entender la evidencia de determinismo.
-11. `docs/architecture.md`, `design.md` y `tasks.md` al final, separando diseño normativo, plan histórico y checkout vivo.
+11. `docs/agent/ARCHITECTURE.md`, `docs/architecture.md` (stub), `openspec/specs/` y el archivo histórico `openspec/changes/archive/2026-08-29-clinical-compiler-r1/` al final, separando diseño normativo, plan histórico y checkout vivo.
 
 ## Limitaciones
 
