@@ -295,16 +295,16 @@ El linter duplica deliberadamente la tabla de glyphs del renderer para no valida
 
 ## Composición y shell
 
-### `src/clinical_compiler/pipeline.py:1-268`
+### `src/clinical_compiler/pipeline.py:1-307`
 
 **Imports relevantes:** dataclasses, `Final`, adapters, cuatro passes, renderer, linter, core y `StageResult` (`:61-76`).
 
-- `_STAGE_ORDER_EXIT_CODES` (`:86-95`): tabla explícita de diagnósticos a exits `3-10`.
-- `CompileRequest` (`:104-123`): `data: bytes`, `document_mode: str`, `policy: PolicyResolution`.
-- `CompileResult` (`:126-170`): `document: bytes | None`, diagnósticos y política.
-- `CompileResult.__post_init__` (`:153-170`): lanza `ValueError` si un documento coexiste con diagnósticos o si una política resuelta produce simultáneamente “sin documento y sin diagnóstico”.
-- `derive_exit_code(diagnostics)` (`:173-185`): función pura; calcula el menor exit de la tabla para el conjunto de códigos, o `0` si está vacío.
-- `run(request)` (`:188-268`): composición root. Llama a `parse_feed`, validación, normalización, política, admissibility, `CanonicalClinicalIR`, selección, render y lint en orden; detiene el camino de emisión ante cualquier diagnóstico. Una política no resuelta retorna antes de admissibility.
+- `_STAGE_ORDER_EXIT_CODES` (`:94-103`): tabla explícita de diagnósticos a exits `3-10`.
+- `CompileRequest` (`:113-131`): `data: bytes`, `document_mode: str`, `policy: PolicyResolution`.
+- `CompileResult` (`:135-184`): `document: bytes | None`, diagnósticos y política.
+- `CompileResult.__post_init__` (`:167-184`): lanza `ValueError` si un documento coexiste con diagnósticos o si una política resuelta produce simultáneamente “sin documento y sin diagnóstico”.
+- `derive_exit_code(diagnostics)` (`:187-199`): función pura; calcula el menor exit de la tabla para el conjunto de códigos, o `0` si está vacío.
+- `run(request)` (`:222-306`): composición root. Llama a `parse_feed`, validación, normalización, política, admissibility, `CanonicalClinicalIR`, selección, render y lint en orden; detiene el camino de emisión ante cualquier diagnóstico. Una política no resuelta retorna antes de admissibility.
 
 `run` es llamado por el CLI y por `tests/unit/test_pipeline.py`. No tiene `try/except`: la captura de excepción inesperada pertenece a `cli.main`.
 

@@ -13,7 +13,7 @@ If this document conflicts with live code or current specifications under `opens
 | Purpose | Location | Key Symbol |
 |---|---|---|
 | CLI Application Execution | `src/clinical_compiler/cli.py` | `clinical_compiler.cli:main` |
-| Pipeline Orchestration | `src/clinical_compiler/pipeline.py` | `clinical_compiler.pipeline:run` |
+| Pipeline Orchestration | `src/clinical_compiler/pipeline.py` | `clinical_compiler.pipeline:run` (lines 222–306) |
 | Input Parsing & Contract Mapping | `src/clinical_compiler/adapters/` | `structured_feed.parse_feed`, `contract.map_record` |
 | Policy Seed Loading | `src/clinical_compiler/adapters/seed.py` | `load_policy_seed` |
 | Canonical IR & Domain Types | `src/clinical_compiler/core/` | `SourceFactIR`, `CanonicalClinicalFact`, `CanonicalClinicalIR`, `DocumentIR` |
