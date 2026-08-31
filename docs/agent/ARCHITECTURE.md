@@ -197,10 +197,10 @@ Key structural properties preserved across all layers:
 7. CLI atomically writes bytes to `out.txt` and exits with code 0.
 
 ### Quarantined Fact Compilation (Fail-Closed Diagnostic Exit)
-1. Input contains three facts: one invalid type (e.g. `bool` for `FC`), two valid facts.
-2. Input validation quarantines the invalid fact with a diagnostic and returns two surviving facts.
-3. Because diagnostics are present, `pipeline.run` sets `document=None`, preventing document emission entirely.
-4. `derive_exit_code` selects the minimum stage-order code among present diagnostics in the 3–10 range (exit 4 in this scenario) rather than exit 0 or a partial document.
+1. Input feed contains three records: one non-conforming record (e.g. `bool` for `FC`) and two valid records.
+2. Ingestion / validation quarantines the non-conforming record with a `TYPE_ERROR` diagnostic while accepting the two valid facts.
+3. Because diagnostics are accumulated across the run, `pipeline.run` sets `document=None`, suppressing document emission entirely.
+4. `derive_exit_code` selects the minimum stage-order code among present diagnostics in the 3–10 range (exit 4 for `TYPE_ERROR` in this scenario) rather than exit 0 or a partial document.
 5. CLI emits accumulated diagnostics to stderr and exits with the derived exit code.
 
 ### Unresolved Policy Failure (CLI Usage Exit 2)

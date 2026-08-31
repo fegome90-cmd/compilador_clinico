@@ -32,7 +32,7 @@ If code and specifications disagree, identify the discrepancy rather than silent
 ## Working Rules
 
 - Inspect live implementation before editing. Keep changes minimal, typed, and reversible.
-- Respect the dependency hierarchy: `cli -> pipeline -> {passes, renderers, linter} -> {adapters, pipeline_types} -> core -> types`. Direct imports are explicitly bounded (see `docs/agent/ARCHITECTURE.md`); `core` is a leaf with zero internal dependencies.
+- Respect the dependency hierarchy: `cli -> pipeline -> {passes, renderers, linter} -> {adapters, pipeline_types} -> core -> types`. Direct imports are explicitly bounded (see `docs/agent/ARCHITECTURE.md`); `core` is a leaf domain layer with zero dependencies on outer compiler layers (intra-core imports between types and IR are permitted).
 - Preserve safety invariants: zero runtime dependencies; immutable `tuple` collections; explicit codepoint sort `(field_id, clinical_fact_id)`; LF-only UTF-8 bytes.
 - Never conflate source-declared certainty (`source_asserted_certainty`) with compiler certainty (`ClinicalValue.certainty`). `source_kind` informs provenance only.
 - Never add `NEVER_AUTO_TERMS` entries without an owner-authored `--policy-seed` or recorded `DEFERRED_BY_OWNER_DECISION`.

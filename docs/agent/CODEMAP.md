@@ -24,7 +24,7 @@ If this document conflicts with live code or current specifications under `opens
 
 ### Core Domain (`src/clinical_compiler/core/`)
 - **Primary files:** `types.py`, `ir.py`, `diagnostics.py`, `policy.py`
-- **Role:** Pure dataclasses, enums, diagnostic codes, and static defaults. Zero internal dependencies.
+- **Role:** Pure dataclasses, enums, diagnostic codes, and static defaults. Zero dependencies on outer layers; intra-core relative imports (e.g. `core.ir` importing `.types`) permitted.
 - **Read first:** `ir.py` for IR ladder (`SourceFactIR` -> `CanonicalClinicalFact` -> `CanonicalClinicalIR` -> `DocumentIR`).
 
 ### Ingestion & Adapters (`src/clinical_compiler/adapters/`)

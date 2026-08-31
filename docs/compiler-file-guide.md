@@ -6,10 +6,10 @@ Esta guía explica el checkout vivo de `compilador_clinico` desde sus tipos más
 
 ## Cómo leer esta guía
 
-1. Empieza por el [recorrido de una compilación](#recorrido-de-una-compilacin).
+1. Empieza por el [recorrido de una compilación](#recorrido-de-una-compilacion).
 2. Sigue la [ruta recomendada de aprendizaje](#ruta-de-lectura-recomendada).
 3. Usa el inventario por archivo como referencia de consulta.
-4. Lee las [discrepancias verificadas](#discrepancias-verificadas-documentacin-frente-a-checkout) antes de asumir que una frase histórica del SDD describe el estado actual.
+4. Lee las [discrepancias verificadas](#discrepancias-verificadas-documentacion-frente-a-checkout) antes de asumir que una frase histórica del SDD describe el estado actual.
 
 ## Alcance y evidencia
 
@@ -68,7 +68,7 @@ El orden está compuesto por `pipeline.run` (`src/clinical_compiler/pipeline.py:
 | **Determinismo** | La misma entrada produce los mismos bytes, IDs y diagnósticos: tuplas, orden explícito por codepoint, formato sin locale, UTF-8/LF y SHA-256. |
 | **PolicyResolution** | Estado de la política D7: seed poblado, vacío aprobado por `DEFERRED_BY_OWNER`, o `UNRESOLVED_POLICY`. El último bloquea antes de admissibility. |
 
-## Recorrido de una compilación
+## Recorrido de una compilacion
 
 ### Ruta exitosa
 
@@ -471,7 +471,7 @@ cli.main
 
 La golden machinery tiene un chain paralelo (`compile_feed`) para validar la determinación del corpus. Los tests llaman los módulos directamente y no forman parte del runtime.
 
-# Discrepancias verificadas: documentación frente a checkout
+# Discrepancias verificadas: documentacion frente a checkout
 
 Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 
@@ -485,7 +485,7 @@ Estas son **observaciones verificadas**, no fallos declarados sin investigar.
 | Convención `--no-sync` inconsistente | `tasks.md:5,20` la exige | Ejemplos del README (`:120-125,285-293`) la omiten | Para ejecución futura debe prevalecer la restricción del SDD; esta guía no ejecutó esos comandos. |
 | Docstring del golden chain es histórica | `tests/golden/golden_machinery.py:10-15` dice que `pipeline.py` aún no existe | `src/clinical_compiler/pipeline.py` sí existe | La machinery conserva texto de la etapa previa y recompone el chain por razones de test. |
 | Sketch de interfaces difiere de firmas reales | `design.md:305-329` muestra `str | None` y `run_admissibility(facts, veto_terms)` | El pipeline usa `bytes | None` (`pipeline.py:149`) y admissibility exige `source_fact_ids` (`:102-106`) | El propio código documenta estas lecturas mínimas; son seams de contrato, no detalles que deban inferirse. |
-| Seed vacío tiene una diferencia semántica | `openspec/specs/admissibility/spec.md` y `seed.py:298-305` | `load_policy_seed` rechaza `{"terms": []}` con `EMPTY_TERMS` y retorna `UNRESOLVED_POLICY`; test en `test_adapters_seed.py:154-166` | Preserva el fail-closed: el set vacío solo es legal vía `DEFERRED_BY_OWNER_DECISION` cuando se omite el flag. |
+| Seed vacío tiene una diferencia semántica | `openspec/specs/diagnostics-policy/spec.md` y `seed.py:298-305` | `load_policy_seed` rechaza `{"terms": []}` con `EMPTY_TERMS` y retorna `UNRESOLVED_POLICY`; test en `test_adapters_seed.py:154-166` | Preserva el fail-closed: el set vacío solo es legal vía `DEFERRED_BY_OWNER_DECISION` cuando se omite el flag. |
 | Certainty de fuente no llega al documento | `design.md:281-286` separa ambas autoridades | `StructuredFeedFact` la conserva, pero `pipeline.py:203-218` reenvía solo `wrapper.fact` | En R1 la assertion vive en `SourceFactIR.source_asserted_certainty` y se expone en `CompileResult.source_asserted_certainties`; el canonical fact/render solo lleva certainty del compilador, siempre `UNRESOLVED`. |
 
 ## Ruta de lectura recomendada
