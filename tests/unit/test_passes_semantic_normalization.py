@@ -493,6 +493,47 @@ def test_multiple_fields_are_invariant_under_global_input_permutations() -> None
         )
 
 
+def test_multiple_conflicted_fields_are_invariant_under_global_permutations() -> None:
+    """All 4! global permutations preserve deterministic diagnostics across fields."""
+    facts = (
+        _fact(
+            fact_id="accept-r1-001-fc-a",
+            field_id="FC",
+            raw_value=72,
+            provenance=Provenance("monitor", "monitor-fc-a"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-fc-b",
+            field_id="FC",
+            raw_value=80,
+            provenance=Provenance("lab", "lab-fc-b"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-ta-a",
+            field_id="TA",
+            raw_value="120/80",
+            provenance=Provenance("monitor", "monitor-ta-a"),
+        ),
+        _fact(
+            fact_id="accept-r1-001-ta-b",
+            field_id="TA",
+            raw_value="90/60",
+            provenance=Provenance("clinical_note", "note-ta-b"),
+        ),
+    )
+    baseline = run_semantic_normalization(facts)
+    assert baseline.admitted == ()
+    assert len(baseline.diagnostics) == 4
+
+    orders = tuple(permutations(facts))
+    assert len(orders) == 24
+    for ordered_facts in orders:
+        result = run_semantic_normalization(ordered_facts)
+        assert result.admitted == baseline.admitted
+        assert result.diagnostics == baseline.diagnostics
+        assert result == baseline
+
+
 def test_corroborating_absence_merges() -> None:
     """Two sources asserting the same absence corroborate it."""
     facts = (

@@ -27,8 +27,11 @@ class StageResult(Generic[_T]):
             (``semantic_normalization`` emits codepoint-sorted
             ``field_id`` order) and otherwise in encounter order —
             passed through for later stages to consume.
-        diagnostics: Diagnostics emitted for the facts this stage
-            quarantined, in encounter order — a stage never raises to
+        diagnostics: Diagnostics emitted for quarantined facts, in
+            deterministic canonical order where a stage requires
+            permutation-invariant diagnostics (``semantic_normalization``
+            emits canonically ordered conflict diagnostics), and
+            otherwise in encounter order — a stage never raises to
             signal a clinical fault (design M2.1).
     """
 

@@ -8,7 +8,7 @@
 | Date | 2026-08-31 |
 | Repository | `compilador_clinico` |
 | Base | `main@16edc21` (R1 archive `clinical-compiler-r1` closed 2026-08-29, `sdd-archive: done`) |
-| Status | DRAFT — bounded post-R1 repair |
+| Status | IMPLEMENTED — pending final verification |
 | Lineage | `R1 archived baseline → post-R1 ACCEPT-R1-001 finding → bounded determinism repair → current normative spec + implementation + regression tests` |
 | Scope | `openspec/specs/determinism-rendering/spec.md` (normative), `src/clinical_compiler/passes/semantic_normalization.py` (already on PR #3), `tests/unit/test_passes_semantic_normalization.py`, `tests/unit/test_pipeline.py` |
 | Non-Scope | Archive mutation, duplicate `fact_id` redesign, R2 features |
@@ -46,7 +46,7 @@ Explicit non-goals: no `fact_id` uniqueness redesign (see Finding below), no pas
 
 Duplicate `SourceFactIR.fact_id` values can be ordered deterministically but may remain lineage-ambiguous because `source_fact_refs` resolve through `fact_id`.
 
-Disposition: **OUT_OF_SCOPE for ACCEPT-R1-001.** Requires separate owner/design adjudication before changing the input contract or source identity model. Do not silently enforce uniqueness unless an existing normative contract already requires it. Recorded here and in this change's tasks/notes for successor triage.
+Disposition: **OUT_OF_SCOPE for ACCEPT-R1-001.** Requires separate owner/design adjudication before changing the input contract or source identity model. Do not silently enforce uniqueness unless an existing normative contract already requires it. Recorded here for successor triage.
 
 ## Risks
 
