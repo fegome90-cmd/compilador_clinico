@@ -234,6 +234,6 @@ def test_canonical_ir_is_a_minimal_plain_frozen_dataclass(
     assert is_dataclass(CanonicalClinicalIR)
     params = CanonicalClinicalIR.__dataclass_params__
     assert params.frozen
-    assert params.slots
+    assert "__slots__" in CanonicalClinicalIR.__dict__
     ir = CanonicalClinicalIR(facts=(_canonical_fact(make_clinical_value()),))
     assert type(ir.facts) is tuple

@@ -1,0 +1,145 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    name: governance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Log provenance metadata
+        run: |
+          echo "=== CI PROVENANCE ==="
+          echo "Event: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR_HEAD_SHA:     ${{ github.event.pull_request.head.sha }}"
+            echo "BASE_SHA:        ${{ github.event.pull_request.base.sha }}"
+            echo "TESTED_REVISION: ${{ github.sha }}"
+          else
+            echo "COMMIT_SHA:      ${{ github.sha }}"
+            echo "PREVIOUS_SHA:    ${{ github.event.before }}"
+            echo "TESTED_REVISION: ${{ github.sha }}"
+          fi
+          echo "======================"
+
+      - name: Diff hygiene & archive immutability guard
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "Checking diff hygiene against PR base $PR_BASE..."
+            git diff --check "$PR_BASE"...HEAD
+
+            echo "Checking historical archive immutability against PR base $PR_BASE..."
+            VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "$PR_BASE"...HEAD -- openspec/changes/archive/)
+          else
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE_SHA="HEAD~1"
+            fi
+            echo "Checking diff hygiene between $BEFORE_SHA and $HEAD_SHA..."
+            git diff --check "$BEFORE_SHA" "$HEAD_SHA"
+
+            echo "Checking historical archive immutability between $BEFORE_SHA and $HEAD_SHA..."
+            VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "$BEFORE_SHA" "$HEAD_SHA" -- openspec/changes/archive/)
+          fi
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Historical archive files were modified, deleted, or replaced:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "Archive integrity and diff hygiene checks passed."
+
+  static:
+    name: static
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.7"
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Sync dependencies (locked)
+        run: uv sync --locked --python 3.11
+
+      - name: Lint check (Ruff)
+        run: uv run --no-sync ruff check src tests
+
+      - name: Type check (mypy strict)
+        run: uv run --no-sync mypy --strict src
+
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.7"
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Sync dependencies (locked)
+        run: uv sync --locked --python 3.11
+
+      - name: Run test suite & coverage gate
+        run: uv run --no-sync pytest -q
+
+      - name: CLI entrypoint smoke check
+        run: uv run --no-sync clinical-compiler --help
+
+  gate:
+    name: gate
+    if: always()
+    needs:
+      - governance
+      - static
+      - tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all verification jobs
+        env:
+          GOVERNANCE_RESULT: ${{ needs.governance.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
+          TESTS_RESULT: ${{ needs.tests.result }}
+        run: |
+          echo "Evaluating upstream verification jobs:"
+          echo "governance: $GOVERNANCE_RESULT"
+          echo "static:     $STATIC_RESULT"
+          echo "tests:      $TESTS_RESULT"
+          test "$GOVERNANCE_RESULT" = "success"
+          test "$STATIC_RESULT" = "success"
+          test "$TESTS_RESULT" = "success"
+          echo "CI Gate PASSED — all verification requirements satisfied."

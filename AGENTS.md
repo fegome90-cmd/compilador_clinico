@@ -56,7 +56,7 @@ uv run --no-sync mypy --strict src
 python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" . --strict-generated
 ```
 
-Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, and structural context valid.
+Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, structural context valid, and CI gate (`gate` job in `.github/workflows/ci.yml`) reporting green.
 
 ## References
 
