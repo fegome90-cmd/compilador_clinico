@@ -8,7 +8,7 @@
 | Date | 2026-08-31 |
 | Repository | `compilador_clinico` |
 | Base | `main@16edc21` (R1 archive `clinical-compiler-r1` closed 2026-08-29, `sdd-archive: done`) |
-| Status | IMPLEMENTED — pending final verification |
+| Status | IMPLEMENTED — verified |
 | Lineage | `R1 archived baseline → post-R1 ACCEPT-R1-001 finding → bounded determinism repair → current normative spec + implementation + regression tests` |
 | Scope | `openspec/specs/determinism-rendering/spec.md` (normative), `src/clinical_compiler/passes/semantic_normalization.py` (already on PR #3), `tests/unit/test_passes_semantic_normalization.py`, `tests/unit/test_pipeline.py` |
 | Non-Scope | Archive mutation, duplicate `fact_id` redesign, R2 features |
