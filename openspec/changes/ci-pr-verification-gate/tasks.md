@@ -44,10 +44,18 @@
 
 ---
 
-## Phase 4: Activation & Closure (Pending Post-Merge Activation)
+## Phase 4: Activation & Closure (Completed)
 
-- [ ] 4.1 Merge PR #4 to `main`.
-- [ ] 4.2 Verify post-merge `push: main` CI execution (`gate` green).
-- [ ] 4.3 Enable Strict branch protection on `main` requiring `gate`, PR approval, conversation resolution, no bypass, and blocking force push/deletion.
-- [ ] 4.4 Verify protection by readback via GitHub API.
-- [ ] 4.5 Record final execution receipt in `openspec/changes/ci-pr-verification-gate/` and transition status to `IMPLEMENTED — verified / CLOSED`.
+- [x] 4.1 Merge PR #4 to `main`.
+- [x] 4.2 Verify post-merge `push: main` CI execution (`gate` green).
+- [x] 4.3 Enable strict branch protection on `main` requiring pull requests and `gate`, with conversation resolution, admin enforcement, and blocked force pushes/deletions.
+- [x] 4.4 Verify protection by readback via GitHub API.
+- [x] 4.5 Record final execution receipt in `openspec/changes/ci-pr-verification-gate/` and transition status to `IMPLEMENTED — verified / CLOSED`.
+
+### Phase 4 Closeout Evidence
+
+- Verification date: `2026-09-01`.
+- Merge: PR #4, `main@94c05e44171ab867e8f304d12feec65b2bd725e4`.
+- Post-merge run: `33513044380` — `success`; `governance`, `static`, `tests`, and `gate` all succeeded.
+- Protection readback: protected **VERIFIED**; PR required **VERIFIED**; `gate` required **VERIFIED**; strict up-to-date **VERIFIED**; conversation resolution **VERIFIED**; admin bypass blocked/enforced **VERIFIED** (`enforce_admins.enabled=true`); force pushes blocked **VERIFIED**; deletion blocked **VERIFIED**. `required_approving_review_count=0` is the configured solo-maintainer setting, not a missing PR requirement.
+- Durable receipt: [`phase4-close.md`](phase4-close.md).

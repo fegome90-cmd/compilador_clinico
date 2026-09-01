@@ -19,6 +19,7 @@ If this document conflicts with live code or current specifications under `opens
 | Canonical IR & Domain Types | `src/clinical_compiler/core/` | `SourceFactIR`, `CanonicalClinicalFact`, `CanonicalClinicalIR`, `DocumentIR` |
 | Deterministic Rendering | `src/clinical_compiler/renderers/deterministic.py` | `render_document` |
 | Conformance Linting | `src/clinical_compiler/linter/conformance.py` | `lint_conformance` |
+| PR / Main Verification CI | `.github/workflows/ci.yml` | `governance`, `static`, `tests`, `gate` |
 
 ## Subsystem Map
 
@@ -83,10 +84,17 @@ CLI (cli.py:main)
 - **Likely affected:** `src/clinical_compiler/linter/conformance.py`, `tests/unit/test_renderers_deterministic.py`, `tests/unit/test_integration_golden_determinism.py`
 - **Verify:** `uv run --no-sync pytest tests/unit/test_renderers_deterministic.py tests/unit/test_integration_golden_determinism.py`
 
+### If changing CI / repository verification
+- **Start with:** `.github/workflows/ci.yml` and `docs/agent/RUNTIME.md`
+- **Likely affected:** `docs/agent/CODEMAP.md`, `AGENTS.md`, and the active SDD work unit under `openspec/changes/ci-pr-verification-gate/`
+- **Verify:** the relevant GitHub Actions run and protected-`main` branch-protection readback; documentation or YAML alone is not live evidence.
+- **Do not change:** `docs/agent/CONTEXT.md`, `docs/agent/ARCHITECTURE.md`, `src/`, `tests/`, `openspec/specs/`, or `openspec/changes/archive/` without explicit authorization.
+
 ## Cross-Cutting Locations
 
 - **Test Suite:** `tests/unit/` (mirroring module structure under `src/clinical_compiler/`)
 - **Package Configuration:** `pyproject.toml`
+- **CI Workflow:** `.github/workflows/ci.yml`
 - **Domain Specifications:** `openspec/specs/`
 
 ## Generated Map Note

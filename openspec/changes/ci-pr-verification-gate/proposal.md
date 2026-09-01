@@ -8,7 +8,7 @@
 | Date | 2026-09-01 |
 | Repository | `compilador_clinico` |
 | Base | `main@f8658a3` (post-PR #3 baseline) |
-| Status | IMPLEMENTED — CI verified / activation pending |
+| Status | IMPLEMENTED — verified / CLOSED |
 | Decision Owner | Felipe Gonzalez (human) |
 | Reviewer | Human-designated reviewer; MUST be distinct from executor |
 | Lineage | `PR #1 (R1 Core) → PR #2 (ACS v1.1) → PR #3 (Permutation Invariance) → PR Verification CI Gate (this proposal)` |
@@ -19,7 +19,7 @@
 
 Recent PR reviews, especially PR #3, required manual reconciliation and presented friction points:
 
-1. **Verification Provenance:** Pre-merge confidence currently relies on human/agent text reports of local test runs (e.g. `629 passed`, `99.80% cov`, `ruff PASS`, `mypy PASS`). GitHub itself exhibits zero native workflow execution runs (`GitHub Actions CI = NOT CONFIGURED`). Reviews must explicitly distinguish local executor claims from independent, durable CI evidence bound to the tested revision.
+1. **Verification Provenance:** At proposal time, pre-merge confidence relied on human/agent text reports of local test runs (e.g. `629 passed`, `99.80% cov`, `ruff PASS`, `mypy PASS`), while GitHub Actions had no native workflow execution runs (`GitHub Actions CI = NOT CONFIGURED`). Reviews therefore had to explicitly distinguish local executor claims from independent, durable CI evidence bound to the tested revision.
 2. **Serial Discovery of Mechanical Defects:** Without parallelized CI feedback, defects in style, types, or tests are discovered sequentially during local developer preflights.
 3. **Historical Archive Immutability:** The repository invariant that historical R1 bundles (`openspec/changes/archive/2026-08-29-clinical-compiler-r1/`) are immutable currently depends on ad-hoc diff checks (`git diff ...`) rather than an automated, fail-closed gate.
 
