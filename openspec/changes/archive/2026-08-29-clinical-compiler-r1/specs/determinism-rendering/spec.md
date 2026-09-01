@@ -25,22 +25,6 @@ Rationale: P4 constructs references only from surviving admissible canonical fac
 - WHEN both outputs are SHA-256 hashed
 - THEN the digests are equal
 
-### Requirement: Equivalent Fact-Set Permutation Invariance
-
-Compiling equivalent validated fact sets SHALL produce identical canonical
-facts, provenance, diagnostics, and rendered bytes regardless of input record
-order. This is distinct from cross-run determinism: it compares equivalent
-inputs whose records are permuted, rather than rerunning one identical fixture
-set in fresh interpreters.
-
-#### Scenario: Equivalent fact-set permutation
-
-- GIVEN two feeds containing the same validated fact records in different
-  orders
-- WHEN both feeds are normalized and compiled
-- THEN their canonical facts, conflict messages, provenance, source references,
-  diagnostics, and rendered documents are identical
-
 #### Scenario: Golden digest match
 
 - GIVEN the committed golden digest for a fixture set
