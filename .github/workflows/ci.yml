@@ -39,22 +39,36 @@ jobs:
           fi
           echo "======================"
 
-      - name: PR diff hygiene & archive immutability guard
-        if: github.event_name == 'pull_request'
+      - name: Diff hygiene & archive immutability guard
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
-          echo "Checking diff hygiene against $BASE_SHA..."
-          git diff --check "$BASE_SHA"...HEAD
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "Checking diff hygiene against PR base $PR_BASE..."
+            git diff --check "$PR_BASE"...HEAD
 
-          echo "Checking historical archive immutability against $BASE_SHA..."
-          VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "$BASE_SHA"...HEAD -- openspec/changes/archive/)
+            echo "Checking historical archive immutability against PR base $PR_BASE..."
+            VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "$PR_BASE"...HEAD -- openspec/changes/archive/)
+          else
+            if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE_SHA="HEAD~1"
+            fi
+            echo "Checking diff hygiene between $BEFORE_SHA and $HEAD_SHA..."
+            git diff --check "$BEFORE_SHA" "$HEAD_SHA"
+
+            echo "Checking historical archive immutability between $BEFORE_SHA and $HEAD_SHA..."
+            VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "$BEFORE_SHA" "$HEAD_SHA" -- openspec/changes/archive/)
+          fi
+
           if [ -n "$VIOLATIONS" ]; then
             echo "::error::Historical archive files were modified, deleted, or replaced:"
             echo "$VIOLATIONS"
             exit 1
           fi
-          echo "Archive integrity check passed."
+          echo "Archive integrity and diff hygiene checks passed."
 
   static:
     name: static

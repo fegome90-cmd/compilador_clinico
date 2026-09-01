@@ -84,19 +84,20 @@ This correctly handles both event types:
 - **Runner:** `ubuntu-latest`
 - **Purpose:** Fast repository-level structural integrity and historical immutability.
 - **Steps:**
-  1. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` with `fetch-depth: 0` and `persist-credentials: false` (full history for PR diffs).
-  2. **Provenance Logging:** Echo `PR_HEAD_SHA`, `BASE_SHA`, and `TESTED_REVISION` (for PRs) or `COMMIT_SHA` (for pushes).
-  3. **PR Diff Checks (`if: github.event_name == 'pull_request'`):**
-     - **Diff Hygiene:** `git diff --check "${{ github.event.pull_request.base.sha }}"...HEAD`
-     - **Archive Immutability Guard:**
+  1. `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1` with `fetch-depth: 0` and `persist-credentials: false` (full history for diffs).
+  2. **Provenance Logging:** Echo `PR_HEAD_SHA`, `BASE_SHA`, and `TESTED_REVISION` (for PRs) or `COMMIT_SHA` / `PREVIOUS_SHA` (for pushes).
+  3. **Diff Hygiene & Archive Immutability Guard (both PR and push):**
+     - **On `pull_request`:**
        ```bash
-       VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "${{ github.event.pull_request.base.sha }}"...HEAD -- openspec/changes/archive/)
-       if [ -n "$VIOLATIONS" ]; then
-         echo "::error::Historical archive files were modified, deleted, or replaced:"
-         echo "$VIOLATIONS"
-         exit 1
-       fi
+       git diff --check "${PR_BASE}"...HEAD
+       VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "${PR_BASE}"...HEAD -- openspec/changes/archive/)
        ```
+     - **On `push`:**
+       ```bash
+       git diff --check "${BEFORE_SHA}" "${HEAD_SHA}"
+       VIOLATIONS=$(git diff --no-renames --diff-filter=MDT --name-only "${BEFORE_SHA}" "${HEAD_SHA}" -- openspec/changes/archive/)
+       ```
+     - Fails if `VIOLATIONS` is non-empty or whitespace corruption is detected.
 
 ### Job 2: `static`
 - **Runner:** `ubuntu-latest`
