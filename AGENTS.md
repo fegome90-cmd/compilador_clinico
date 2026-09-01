@@ -25,6 +25,7 @@ If code and specifications disagree, identify the discrepancy rather than silent
 | Inspect or evolve system architecture | `docs/agent/ARCHITECTURE.md` |
 | Locate implementation & change surfaces | `docs/agent/CODEMAP.md` |
 | Run CLI, tests, or check exit semantics | `docs/agent/RUNTIME.md` |
+| Inspect or change CI / repository verification | `.github/workflows/ci.yml` + `docs/agent/RUNTIME.md` |
 | Consult normative domain specifications | `openspec/specs/` |
 | Inspect historical R1 design decisions | `openspec/changes/archive/2026-08-29-clinical-compiler-r1/` |
 | Track active feature plans and tasks | active SDD work unit |
@@ -56,7 +57,7 @@ uv run --no-sync mypy --strict src
 python "${ACS_ROOT:-$HOME/.claude/skills/agent-context-system}/scripts/validate_agent_context.py" . --strict-generated
 ```
 
-Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, structural context valid, and CI gate (`gate` job in `.github/workflows/ci.yml`) reporting green.
+Success criteria: 0 failed tests, branch coverage >= 95.0%, 0 mypy errors, 0 ruff errors, structural context valid, and CI gate (`gate` job in `.github/workflows/ci.yml`) reporting green. Live protected-`main` enforcement requires the `gate` status check only as confirmed by branch-protection readback.
 
 ## References
 

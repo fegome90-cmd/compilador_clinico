@@ -57,11 +57,13 @@ No daemon, background worker, web server, database connection, or network socket
 
 ### CI Verification Gate (GitHub Actions)
 
-Continuous integration runs on every PR and push to `main` via `.github/workflows/ci.yml`:
-- **`governance`:** Checkout with full history, logs provenance (`PR_HEAD_SHA`, `BASE_SHA`, `TESTED_REVISION`), checks PR diff hygiene (`git diff --check`), and guards historical archive immutability (`git diff --no-renames --diff-filter=MDT ... openspec/changes/archive/`).
+Continuous integration runs for `pull_request` targeting `main` and for `push` to `main` via `.github/workflows/ci.yml`:
+- **`governance`:** Checks diff hygiene and historical archive immutability in both contexts. For a PR it compares the PR base SHA (`github.event.pull_request.base.sha`) with the tested merge revision (`github.sha`); for a push it compares `github.event.before` with `github.sha`.
 - **`static`:** Runs `ruff check` and `mypy --strict` under Python 3.11 with pinned `uv` toolchain.
-- **`tests`:** Executes full test suite with `>= 95%` branch coverage enforcement and CLI entrypoint smoke check under Python 3.11.
-- **`gate`:** Aggregate fail-closed status check requiring success across `governance`, `static`, and `tests`. Required for branch protection.
+- **`tests`:** Executes the full test suite with `>= 95%` branch coverage enforcement and the CLI entrypoint smoke check under Python 3.11.
+- **`gate`:** Fail-closed aggregate job requiring success from `governance`, `static`, and `tests`.
+
+The `gate` status check is the required branch-protection check for protected `main`, based on live branch-protection readback.
 
 ## Exit Behavior and Codes
 

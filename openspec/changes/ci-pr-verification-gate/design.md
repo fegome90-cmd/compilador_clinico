@@ -9,9 +9,9 @@ The PR Verification Gate is a single-file, multi-job GitHub Actions workflow (`.
                                   │ governance                                    │
                                   │ - Checkout (fetch-depth: 0)                   │
                                   │ - Provenance log (PR_HEAD / BASE / TESTED)    │
-                                  │ - if: pull_request:                           │
-                                  │     * git diff --check                        │
-                                  │     * archive guard (base.sha...HEAD)         │
+                                  │ - Diff hygiene & archive guard:               │
+                                  │     * pull_request: base.sha...tested merge   │
+                                  │     * push: event.before...github.sha         │
                                   └──────────────────────┬────────────────────────┘
                                                          │
                                   ┌──────────────────────▼────────────────────────┐
