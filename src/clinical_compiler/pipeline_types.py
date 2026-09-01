@@ -22,8 +22,11 @@ class StageResult(Generic[_T]):
     """Outcome of one pipeline stage over the survivors it received.
 
     Attributes:
-        admitted: Facts that survived the stage, in encounter order —
-            passed through unchanged for later stages to consume.
+        admitted: Facts that survived the stage, in deterministic
+            canonical order where required for permutation invariance
+            (``semantic_normalization`` emits codepoint-sorted
+            ``field_id`` order) and otherwise in encounter order —
+            passed through for later stages to consume.
         diagnostics: Diagnostics emitted for the facts this stage
             quarantined, in encounter order — a stage never raises to
             signal a clinical fault (design M2.1).
