@@ -55,6 +55,14 @@ No daemon, background worker, web server, database connection, or network socket
 - **Linting:** `uv run --no-sync ruff check src tests`
 - **Strict type checking:** `uv run --no-sync mypy --strict src`
 
+### CI Verification Gate (GitHub Actions)
+
+Continuous integration runs on every PR and push to `main` via `.github/workflows/ci.yml`:
+- **`governance`:** Checkout with full history, logs provenance (`PR_HEAD_SHA`, `BASE_SHA`, `TESTED_REVISION`), checks PR diff hygiene (`git diff --check`), and guards historical archive immutability (`git diff --no-renames --diff-filter=MDT ... openspec/changes/archive/`).
+- **`static`:** Runs `ruff check` and `mypy --strict` under Python 3.11 with pinned `uv` toolchain.
+- **`tests`:** Executes full test suite with `>= 95%` branch coverage enforcement and CLI entrypoint smoke check under Python 3.11.
+- **`gate`:** Aggregate fail-closed status check requiring success across `governance`, `static`, and `tests`. Required for branch protection.
+
 ## Exit Behavior and Codes
 
 The compiler maps execution outcomes to strict process exit codes:

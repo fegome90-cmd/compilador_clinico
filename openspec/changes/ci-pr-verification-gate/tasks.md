@@ -36,16 +36,16 @@
 
 ---
 
-## Phase 3: Verification & Scenario Testing (Future Implementation Work Unit)
+## Phase 3: Verification & Scenario Testing (Completed)
 
-- [ ] 3.1 Validate `.github/workflows/ci.yml` syntax.
-- [ ] 3.2 Verify archive guard against all 5 matrix scenarios (unmodified archive, added new archive, modified archive, deleted archive, moved archive).
-- [ ] 3.3 Open PR on GitHub and verify live CI execution, parallel job execution, and provenance logging.
-- [ ] 3.4 Verify stale run cancellation by pushing a second commit to the PR branch.
+- [x] 3.1 Validate `.github/workflows/ci.yml` syntax.
+- [x] 3.2 Verify archive guard against all 5 matrix scenarios (unmodified archive, added new archive, modified archive, deleted archive, moved archive).
+- [x] 3.3 Open PR on GitHub and verify live CI execution, parallel job execution, and provenance logging.
+- [x] 3.4 Verify stale run cancellation by pushing a second commit to the PR branch.
 
 ---
 
-## Phase 4: Activation & Closure (Future Implementation Work Unit)
+## Phase 4: Activation & Closure (Completed)
 
-- [ ] 4.1 Update `docs/agent/RUNTIME.md` and `AGENTS.md` to document the live CI gate.
-- [ ] 4.2 Record final execution receipt in `openspec/changes/ci-pr-verification-gate/` and transition status to `IMPLEMENTED — verified`.
+- [x] 4.1 Update `docs/agent/RUNTIME.md` and `AGENTS.md` to document the live CI gate.
+- [x] 4.2 Record final execution receipt in `openspec/changes/ci-pr-verification-gate/` and transition status to `IMPLEMENTED — verified`.

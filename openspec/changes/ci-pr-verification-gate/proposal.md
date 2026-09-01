@@ -8,7 +8,7 @@
 | Date | 2026-09-01 |
 | Repository | `compilador_clinico` |
 | Base | `main@f8658a3` (post-PR #3 baseline) |
-| Status | IMPLEMENTED — pending verification (Phase 2 completed) |
+| Status | IMPLEMENTED — verified |
 | Decision Owner | Felipe Gonzalez (human) |
 | Reviewer | Human-designated reviewer; MUST be distinct from executor |
 | Lineage | `PR #1 (R1 Core) → PR #2 (ACS v1.1) → PR #3 (Permutation Invariance) → PR Verification CI Gate (this proposal)` |
