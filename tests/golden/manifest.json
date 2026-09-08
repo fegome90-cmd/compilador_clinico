@@ -1,4 +1,8 @@
 {
+  "compile_context": {
+    "document_mode": "NURSING_RECORD_TELEGRAPHIC",
+    "policy": "DEFERRED_BY_OWNER_DECISION"
+  },
   "evidence_integrity_vocabulary": [
     "VALID",
     "DEGRADED",
