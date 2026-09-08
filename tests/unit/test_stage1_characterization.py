@@ -97,6 +97,7 @@ def _manifest(path: Path) -> dict[str, Any]:
 
 
 def _context(manifest: dict[str, Any]) -> dict[str, str]:
+    assert "compile_context" in manifest, "C1 missing compile_context"
     assert manifest["compile_context"] == CONTEXT
     return CONTEXT
 
@@ -127,6 +128,18 @@ def test_c1_independent_expected_bytes_match_pipeline_and_digest() -> None:
         assert result.document is not None
         assert result.document == expected
         assert hashlib.sha256(result.document).hexdigest() == row["sha256"]
+
+
+def test_c1_missing_compile_context_fails_closed_with_named_scenario(
+    tmp_path: Path,
+) -> None:
+    invalid_manifest = _manifest(GOLDEN / "independent" / "MANIFEST.json")
+    del invalid_manifest["compile_context"]
+    manifest_path = tmp_path / "MANIFEST.json"
+    manifest_path.write_text(json.dumps(invalid_manifest), encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="C1 missing compile_context"):
+        _context(_manifest(manifest_path))
 
 
 def _line(value: object) -> bytes:
