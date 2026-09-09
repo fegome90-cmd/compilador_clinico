@@ -98,7 +98,7 @@ def _manifest(path: Path) -> dict[str, Any]:
 
 def _context(manifest: dict[str, Any]) -> dict[str, str]:
     assert "compile_context" in manifest, "C1 missing compile_context"
-    assert manifest["compile_context"] == CONTEXT
+    assert manifest["compile_context"] == CONTEXT, "C1 conflicting compile_context"
     return CONTEXT
 
 
@@ -139,6 +139,20 @@ def test_c1_missing_compile_context_fails_closed_with_named_scenario(
     manifest_path.write_text(json.dumps(invalid_manifest), encoding="utf-8")
 
     with pytest.raises(AssertionError, match="C1 missing compile_context"):
+        _context(_manifest(manifest_path))
+
+
+def test_c1_conflicting_document_mode_fails_closed_with_named_scenario(
+    tmp_path: Path,
+) -> None:
+    conflicting_manifest = _manifest(GOLDEN / "independent" / "MANIFEST.json")
+    conflicting_context = dict(conflicting_manifest["compile_context"])
+    conflicting_context["document_mode"] = "SOME_OTHER_MODE"
+    conflicting_manifest["compile_context"] = conflicting_context
+    manifest_path = tmp_path / "MANIFEST.json"
+    manifest_path.write_text(json.dumps(conflicting_manifest), encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="C1 conflicting compile_context"):
         _context(_manifest(manifest_path))
 
 
