@@ -251,8 +251,8 @@ Architectural drift is prohibited. Any intentional modification to component res
 
 | Invariant | Verification Mechanism |
 |---|---|
-| Zero runtime dependencies | `tests/unit/test_cli.py:test_runtime_dependencies_are_empty` inspecting `pyproject.toml` |
-| Import & dependency direction | AST static import analysis script validating forbidden module import edges |
+| Zero runtime dependencies | `tests/unit/test_cli.py::test_pyproject_registers_the_console_script_with_zero_deps` inspecting `pyproject.toml` |
+| Import & dependency direction | `tests/unit/test_architecture_gates.py::test_production_import_boundaries_are_respected` parsing production ASTs for forbidden module import edges |
 | Byte determinism | `tests/unit/test_integration_golden_determinism.py` testing across multiple invocations |
 | Test coverage threshold | `pytest --cov=clinical_compiler --cov-report=term-missing` requiring >= 95.0% branch coverage |
 | Static typing & linting | `mypy --strict src` and `ruff check src tests` exiting with code 0 |
@@ -270,3 +270,8 @@ Architectural drift is prohibited. Any intentional modification to component res
 
 - **Type Narrowing Debt:** `ClinicalValue.value` is typed as `Any` at the dataclass level, although field contracts restrict it at runtime. Narrowing the static type definition is tracked for R2.
 - **Policy Authoring Boundary:** Clinical policy terms must be authored by clinical domain owners via `--policy-seed` and never hardcoded into the compiler core.
+
+## Etapa 0 Documentation Cross-References (Scope: navigation and evidence only)
+
+- [R1 baseline evidence](BASELINE_R1.md) freezes the live commit and records typed evidence; it does not replace this architecture authority.
+- [Architecture debt map](ARCHITECTURE_DEBT_MAP.md) records D0.1-D0.6 as non-authoritative deferred seams; it does not authorize refactoring. `openspec/specs/` remains normative and the staged roadmap remains read-only input.

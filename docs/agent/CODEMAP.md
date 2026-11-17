@@ -100,3 +100,8 @@ CLI (cli.py:main)
 ## Generated Map Note
 
 No automated repository map generator exists in this repository. In accordance with ACS v1.1 standards, no `CODEMAP.generated.md` placeholder is generated.
+
+## Etapa 0 Documentation Cross-References (Scope: navigation only)
+
+- [R1 baseline evidence](BASELINE_R1.md) — live identity, golden anchors, and typed command evidence.
+- [Architecture debt map](ARCHITECTURE_DEBT_MAP.md) — D0.1-D0.6 ownership and evidenced import edges; non-authoritative and documentation-only.
